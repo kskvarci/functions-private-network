@@ -43,13 +43,13 @@ To deploy a simple hub and spoke network for testing you can use [this ARM templ
 
 1. Create a subnet in your spoke called "integration-subnet". This subnet will be use for your Function App's regional VNet Integration.
 
-2. Set up service endpoints. To make this simple, we'll enable endpoints in the integration subnet for all common services that the function host might need to access via bindings, triggers or normal operations. These include: *Microsoft.Storage*, *Microsoft.AzureCosmosDB*, *Microsoft.EventHub*, *Microsoft.ServiceBus* and *Microsoft.Web*.
+2. Set up service endpoints. To make this simple, we'll enable endpoints in the integration subnet for all common services that the function host might need to access via bindings, triggers or normal operations. These include: *Microsoft.Storage*, *Microsoft.AzureCosmosDB*, *Microsoft.EventHub*, *Microsoft.ServiceBus* and *Microsoft.Web*. These service endpoints are needed for the function host which is running on the function app to communicate with services via regional VNet integration.
 
 3. Create an NSG named "integration-subnet-nsg" and apply it to "integration-subnet".
 
 4. Add a rule to the NSG to deny all traffic from VirtualNetwork to Internet on all ports (*). Set the priority to 500. This will force us to explicitly allow all outbound flows. Setting the rule with a priority of 500 gives us room to create rules above it to open targeted flows.
 
-5. Add NSG rules for the above services on "integration-subnet-nsg" . Add outbound rules to allow traffic to the above services using each services service tag: *Storage*, *AzureCosmosDB*, *EventHub*, *ServiceBus* and *AppService*. Make sure these rules all sit above the internet deny rule. E.G < 500 from a priority perspective.
+5. Add NSG rules for the above services on "integration-subnet-nsg" . Add outbound rules to allow traffic to the above services using each services service tag: *Storage*, *AzureCosmosDB*, *EventHub*, *ServiceBus* and *AppService*. Make sure these rules all sit above the internet deny rule. E.G < 500 from a priority perspective. These rules are needed in tandem with the service endpoints to allow the function host access to the services. See the below ARM template for specifics on ports, etc.
 
    ------
 
@@ -73,14 +73,14 @@ To deploy a simple hub and spoke network for testing you can use [this ARM templ
 
 ## Monitoring Setup
 
-It's best to get monitoring working before we start deploying functions. The functions host will be default be instrumented with App Insights. Connectivity to App Insights however will be broken in this architecture until we give the function host which is running on the function app a path to the public App Insights endpoints. In the future we can solve this problem by using a private endpoint for Azure Monitor. Today however we need to filter this traffic with Azure Firewall.
+It's best to get monitoring working before we start deploying functions. The functions host will be instrumented with App Insights by default. Connectivity to App Insights however will be broken in this architecture until we give the function host which is running on the function app a path to the public App Insights endpoints. In the future we can solve this problem by using a private endpoint for Azure Monitor. Today however we need to filter this traffic with Azure Firewall.
 
 1. Deploy Azure Firewall into the Hub VNet. Firewall needs to go into a subnet called AzureFirewallSubnet.
 2. Create a User Defined Route (UDR) w/ a route sending address prefix 0.0.0.0/0 to next hop of type "Virtual Appliance" referencing the internal IP of the firewall.
 3. Assign the route to the integration subnet.
 4. Add a new outbound rule to "integration-subnet-nsg" to allow VirtualNetwork to the service tag of AzureMonitor on port 443. Make it priority 498.
-5. Set up application rules for rt.services.visualstudio.com on 443, dc.services.visualstudio.com on 443
-6. Make sure that you have an NSG rule to allow outbound traffic out of the integration subnet. You can reference the AzureMonitor service tag as a destination. Use 443 as a destination port.
+5. Set up application rules for rt.services.visualstudio.com on 443, dc.services.visualstudio.com on 443. These are the public App Insights endpoints that code running in the function host will try to hit when it sends telemetry.
+6. Make sure that you have an NSG rule to allow outbound traffic out of the integration subnet. You can reference the AzureMonitor service tag as a destination. Use 443 as a destination port. 
 
 [top ->](#TOC)
 
