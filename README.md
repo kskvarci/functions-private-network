@@ -16,7 +16,7 @@
 
 Azure functions are  simple to get up and running in their default configuration. Things get significantly more complex when integrating into private networks where the flow of traffic is controlled more granularly. Below is a diagram showing a fully locked down implementation for a single region in Azure. We'll walk through simulating this in a test environment.
 
-![](images\All.PNG)
+![](images\All.PNG "full deployment")
 
 [top ->](#TOC)
 
