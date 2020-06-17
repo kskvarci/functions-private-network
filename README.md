@@ -33,7 +33,7 @@ This guide assumes that you're trying to deploy Azure Functions into a networkin
 
 ------
 
-To deploy a simple hub and spoke network for testing you can use [this ARM template](templates\base-network\azuredeploy.json).
+To deploy a simple hub and spoke network for testing you can use [this ARM template](templates/base-network/azuredeploy.json).
 
 ------
 
@@ -53,7 +53,7 @@ To deploy a simple hub and spoke network for testing you can use [this ARM templ
 
    ------
 
-   Use this [ARM template](templates\integration-subnet\azuredeploy.json) to create and configure the above subnet.
+   Use this [ARM template](templates/integration-subnet/azuredeploy.json) to create and configure the above subnet.
 
    ------
 
