@@ -4,13 +4,13 @@
 
 [Overview](#Overview)
 
-[Virtual Network Foundation](#Virtual-Network-Foundation-/-Assumptions)
+[Virtual Network Foundation](#Virtual-Network-Foundation)
 
-[Base Functionality](#Base-Functionality)
+[Deploying a base Function App](#Deploying-a-base-Function-App)
 
-[Monitoring Setup (App Insights)](#Monitoring-Setup-(App-Insights))
+[Monitoring Setup](#Monitoring-Setup)
 
-[Triggers](#Triggers)
+[Triggers and Bindings](#Triggers-and-Bindings)
 
 ## Overview
 
@@ -18,7 +18,9 @@ Azure functions are  simple to get up and running in their default configuration
 
 ![](images\All.PNG)
 
-## Virtual Network Foundation / Assumptions
+[top ->](#TOC)
+
+## Virtual Network Foundation
 
 This guide assumes that you're trying to deploy Azure Functions into a networking environment with the following characteristics:
 
@@ -69,7 +71,7 @@ To deploy a simple hub and spoke network for testing you can use [this ARM templ
 
 [top ->](#TOC)
 
-## Monitoring Setup (App Insights)
+## Monitoring Setup
 
 It's best to get monitoring working before we start deploying functions. The functions host will be default be instrumented with App Insights. Connectivity to App Insights however will be broken in this architecture until we give the function host which is running on the function app a path to the public App Insights endpoints. In the future we can solve this problem by using a private endpoint for Azure Monitor. Today however we need to filter this traffic with Azure Firewall.
 
@@ -82,7 +84,7 @@ It's best to get monitoring working before we start deploying functions. The fun
 
 [top ->](#TOC)
 
-## Triggers and Bindings (via Portal)
+## Triggers and Bindings
 
 At this point we should have a function app up and running with monitoring. Let's walk through creating a few hello world functions with some of the more common triggers / bindings. We'll walk through creating these through the portal for now realizing that in practice functions will be developed on development workstations and likely deployed via pipelines.
 
