@@ -18,7 +18,7 @@ Azure functions are  simple to get up and running in their default configuration
 
 
 ## Networking Walk-Through (Single Region)
-![](images/networkingsingle.PNG)
+![](images/networkingsingle.png)
 ### Producer Flow
 1. A producer application (1) in the Workload Subnet is set up to send messages to a Service Bus Queue running in Namespace A (2).  
 
@@ -46,7 +46,7 @@ Azure functions are  simple to get up and running in their default configuration
 6. Now that the function app (7) has the private endpoints (6) IP it is able to connect to the Service Bus Queue in Namespace A (2) through the Regional VNet integration (8) and private endpoint (6) to read messages when they arrive. 
 
 ## Cross-Region redundancy for non-HTTP functions triggering on Service Bus
-![](images/networkingDR.PNG)
+![](images/networkingDR.png)
 1. Service Bus itself will be setup for Geo Replication across two regions. This causes the primary namespace entities ( no data ) to be replicated to a secondary namespace. In this example we're replicating From Namespace A in East US 2 to Namespace B in Central US.  
 
 2. Producer apps send messages to the Primary Namespace ( Namespace A to start ) using a DNS alias that is specified when geo-replication is configured. This is a literal DNS alias that redirects clients to Namespace A's DNS name.  
@@ -62,4 +62,4 @@ Azure functions are  simple to get up and running in their default configuration
 
 
 ## Networking Walk-Through (Cross-Region Redundancy)
-![](images/networkingmulti.PNG)
+![](images/networkingmulti.png)
