@@ -1,4 +1,4 @@
-# Service Bus - Competing Consumers - HA / DR
+# Implimenting Azure Functions and Service Bus in a Fully Locked Down Environment
 
 ## TOC
 
@@ -6,15 +6,120 @@
 
 [Virtual Network Foundation](#Virtual-Network-Foundation)
 
-[Deploying a base Function App](#Deploying-a-base-Function-App)
+[Deploying in a Single Region](#Deploying-a-base-Function-App)
+- [Deploying Service Bus](#Deploying-a-base-Function-App)
+	- Requirements
+	- Deployment Steps
 
-[Monitoring Setup](#Monitoring-Setup)
+- [Deploying a Function App](#Deploying-a-base-Function-App)
+	- Requirements
+	- Deployment Steps
 
-[Triggers and Bindings](#Triggers-and-Bindings)  
+[Deploying Across Regions for Redundancy](#Deploying-a-base-Function-App)
+- Service Bus
+- Functions
 
 ## Overview
 
-Azure functions are  simple to get up and running in their default configuration. Things get significantly more complex when integrating into private networks where the flow of traffic is controlled more granularly. Below is a diagram showing a fully locked down implementation for a single region in Azure. We'll walk through simulating this in a test environment.  
+Azure functions are relatively simple to get up and running in their default configuration. Things get significantly more complex when integrating into private networks where the flow of traffic is constrained. This is largely due to the fact that functions by their very nature are generally heavily integrated with other services.  
+  
+This document explains key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall. It also goes into detail on how to achieve redundancy across multiple regions.
+
+[top ->](#TOC)  
+
+## Virtual Network Foundation
+
+This guide assumes that you're trying to deploy Azure Functions into a networking environment with the following characteristics:
+
+- The general architecture we'll be building on is [Hub and Spoke.](https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology) 
+- The hub us used for hosting shared services like Azure Firewall and providing connectivity to an on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc. In our test environment, we wont bother with this. It is however possible to simulate an on premises network by using a third "on-premises" VNet and a VPN connection to the hub if desired.
+- The spoke network is used for hosting business workloads. In this case we're integrating our Function App to a subnet that sits within the spoke network.
+- The Hub is peered to Spoke.
+- In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress.
+- Generally, custom DNS is configured on the spoke VNet. DNS forwarders in the hub are used to provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. For our testing we'll just use the default Azure DNS resolvers.
+
+------
+
+To deploy a simple hub and spoke network for testing you can use [this ARM template](templates/base-network/azuredeploy.json).
+
+------
+
+[top ->](#TOC)  
+
+## Deploying in a Single Region
+### Deploying Service Bus
+#### Requirements
+- Service Bus Namespace must have redundancy within a single region to achieve a 99.9% uptime SLA
+- The Service Bus Namespace must only be accessible through a private endpoint running within an RFC 1918 network. E.G. no access should be granted from Internet routable addresses.
+- Deployment must be fully automated and accommodate namespace and entity creation and configuration.
+#### Deployment
+- Create Resource Group
+	```bash
+	az group create --name $resourceGroup1Name --location $resourceGroup1Location
+	```
+- Deploy Namespace ([ARM Template](link_url))
+	```bash
+	az deployment group create --name primaryns --resource-group $resourceGroup1Name --template-file azuredeploy-namespace.json --parameters namespaceName=$namespace1Name
+	```
+- Create Entities ([ARM Template](link_url))
+	```
+	az deployment group create --name queuestopics --resource-group $resourceGroup1Name --template-file azuredeploy-queuestopics.json --parameters namespaceName=$namespace1Name
+	```
+- Configure Private Link and Private DNS Zones ([ARM Template](link_url)
+- )
+	```
+	az deployment group create --name centralusep1 --resource-group $resourceGroup2Name --template-file azuredeploy-privatelink.json --parameters namespaceName=$namespace2Name privateEndpointName=CentraltoCentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=$centralNetworkResourceGroupName primary=false
+
+
+	az deployment group create --name centralusep2 --resource-group $resourceGroup2Name --template-file azuredeploy-privatelink.json --parameters namespaceName=$namespace1Name privateEndpointName=CentraltoEast privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=$centralNetworkResourceGroupName primary=false
+	```
+
+[top ->](#TOC)
+### Deploying A Function App
+#### Requirements
+- Windows App Service Plan
+- Node JS Language
+- Functional Monitoring via AppInsights
+- Regional VNet Integration
+- All egress via VNet Integration
+- Support for Service Bus Trigger  
+
+#### Deployment Steps
+- Deploy an App Service Plan
+	```
+	```
+- Configure the Function App's Storage Account
+	```
+	```
+- Enable Regional VNet Integration
+	```
+	```
+- Force All Traffic down Regional VNet Integration
+	```
+	```
+
+## Deploying Across Regions for Redundancy
+### Service Bus
+### Function Apps
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Networking Walk-Through (Single Region)
