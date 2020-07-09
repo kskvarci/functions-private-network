@@ -43,7 +43,25 @@ Azure functions are  simple to get up and running in their default configuration
 
 5. The DNS forwarder is set up to forward queries for private zones to the internal resolver (4). The internal resolver (4) returns the IP address of the private endpoint (6) instead of the public IP for the namespace as the VNet it's running in has been linked to a private zone specifically configured for Private Link on Service Bus (5).   
 
-6. Now that the function app (7) has the private endpoints (6) IP it is able to connect to the Service Bus Queue in Namespace A (2) through the Regional VNet integration (8) and private endpoint (6) to read messages when they arrive. 
+6. Now that the function app (7) has the private endpoints (6) IP it is able to connect to the Service Bus Queue in Namespace A (2) through the Regional VNet integration (8) and private endpoint (6) to read messages when they arrive.  
+
+### Monitoring Setup
+
+It's best to get monitoring working before we start deploying functions. The functions host will be instrumented with App Insights by default. Connectivity to App Insights however will be broken in this architecture until we give the function host which is running on the function app a path to the public App Insights endpoints. In the future we can solve this problem by using a private endpoint for Azure Monitor. Today however we need to filter this traffic with Azure Firewall.
+
+1. Deploy Azure Firewall into the Hub VNet. Firewall needs to go into a subnet called AzureFirewallSubnet.  
+
+2. Create a User Defined Route (UDR) w/ a route sending address prefix 0.0.0.0/0 to next hop of type "Virtual Appliance" referencing the internal IP of the firewall.  
+
+3. Assign the route to the integration subnet.  
+
+4. Add a new outbound rule to "integration-subnet-nsg" to allow VirtualNetwork to the service tag of AzureMonitor on port 443. Make it priority 498.  
+
+5. Set up application rules for rt.services.visualstudio.com on 443, dc.services.visualstudio.com on 443. These are the public App Insights endpoints that code running in the function host will try to hit when it sends telemetry.  
+
+6. Make sure that you have an NSG rule to allow outbound traffic out of the integration subnet. You can reference the AzureMonitor service tag as a destination. Use 443 as a destination port. 
+
+[top ->](#TOC)  
 
 ## Cross-Region redundancy for non-HTTP functions triggering on Service Bus
 ![](images/networkingDR.png)
