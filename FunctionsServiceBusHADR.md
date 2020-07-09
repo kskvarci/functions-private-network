@@ -1,4 +1,4 @@
-# Implimenting Azure Functions and Service Bus in a Fully Locked Down Environment
+# Implementing Azure Functions and Service Bus in a Fully Locked Down Environment
 
 ## TOC
 
@@ -38,35 +38,42 @@ This guide assumes that you're trying to deploy Azure Functions into a networkin
 - In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress.
 - Generally, custom DNS is configured on the spoke VNet. DNS forwarders in the hub are used to provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. For our testing we'll just use the default Azure DNS resolvers.
 
-------
-
-To deploy a simple hub and spoke network for testing you can use [this ARM template](templates/base-network/azuredeploy.json).
-
-------
+### Deploy
+- Create a resource group
+	```
+	```
+- Deploy the base VNets and Subnets
+	```
+	```
+- Deploy and Configure the Integration Subnet for Regional VNet Integration
+	```
+	```
+- Deploy and configure Azure Firewall
+	```
+	```
 
 [top ->](#TOC)  
 
-## Deploying in a Single Region
+## Deploy Functions and Service Bus in a Single Region
 ### Deploying Service Bus
 #### Requirements
 - Service Bus Namespace must have redundancy within a single region to achieve a 99.9% uptime SLA
 - The Service Bus Namespace must only be accessible through a private endpoint running within an RFC 1918 network. E.G. no access should be granted from Internet routable addresses.
 - Deployment must be fully automated and accommodate namespace and entity creation and configuration.
-#### Deployment
+#### Deploy
 - Create Resource Group
 	```bash
 	az group create --name $resourceGroup1Name --location $resourceGroup1Location
 	```
-- Deploy Namespace ([ARM Template](link_url))
+- Deploy Namespace ([ARM Template](templates/service-bus/azuredeploy-namespace.json))
 	```bash
 	az deployment group create --name primaryns --resource-group $resourceGroup1Name --template-file azuredeploy-namespace.json --parameters namespaceName=$namespace1Name
 	```
-- Create Entities ([ARM Template](link_url))
+- Create Entities ([ARM Template](templates/service-bus/azuredeploy-queuestopics.json))
 	```
 	az deployment group create --name queuestopics --resource-group $resourceGroup1Name --template-file azuredeploy-queuestopics.json --parameters namespaceName=$namespace1Name
 	```
-- Configure Private Link and Private DNS Zones ([ARM Template](link_url)
-- )
+- Configure Private Link and Private DNS Zones ([ARM Template 1](templates/service-bus/azuredeploy-privatelink.json)), ([ARM Template 2](templates/service-bus/azuredeploy-zonelink.json))
 	```
 	az deployment group create --name centralusep1 --resource-group $resourceGroup2Name --template-file azuredeploy-privatelink.json --parameters namespaceName=$namespace2Name privateEndpointName=CentraltoCentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=$centralNetworkResourceGroupName primary=false
 
@@ -75,7 +82,7 @@ To deploy a simple hub and spoke network for testing you can use [this ARM templ
 	```
 
 [top ->](#TOC)
-### Deploying A Function App
+### Deploy A Function App
 #### Requirements
 - Windows App Service Plan
 - Node JS Language
@@ -98,9 +105,10 @@ To deploy a simple hub and spoke network for testing you can use [this ARM templ
 	```
 	```
 
-## Deploying Across Regions for Redundancy
+## Expand to a second region for Redundancy
 ### Service Bus
 ### Function Apps
+
 
 
 
