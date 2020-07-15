@@ -1,42 +1,43 @@
-# Implementing Azure Functions and Service Bus in a Fully Locked Down Environment
+# Serverless Producer / Consumer Pattern in a Locked Down Network
 
-## TOC
+An application running in the cloud is expected to handle a large number of requests. Rather than process each request synchronously, a common technique is for the application to pass them through a messaging system to another service (a consumer service) that handles them asynchronously.This strategy helps to ensure that the business logic in the application isn't blocked while the requests are being processed. For full details on this pattern see the [following article](https://docs.microsoft.com/en-us/azure/architecture/patterns/competing-consumers).
+![](images/competing-consumers-diagram.png)
 
-[Overview](#Overview)
+On Azure, the primary enterprise messaging service is Azure Service Bus. Azure Functions offers a convenient compute platform from which to implement a producer consumer pattern with relatively little underlying infrastructure management.
 
-[Virtual Network Foundation](#Virtual-Network-Foundation)
-
-[Deploying in a Single Region](#Deploying-a-base-Function-App)
-- [Deploying Service Bus](#Deploying-a-base-Function-App)
-	- Requirements
-	- Deployment Steps
-
-- [Deploying a Function App](#Deploying-a-base-Function-App)
-	- Requirements
-	- Deployment Steps
-
-[Deploying Across Regions for Redundancy](#Deploying-a-base-Function-App)
-- Service Bus
-- Functions
-
-## Overview
-
-Azure functions are relatively simple to get up and running in their default configuration. Things get significantly more complex when integrating into private networks where the flow of traffic is constrained. This is largely due to the fact that functions by their very nature are generally heavily integrated with other services.  
+Azure Functions and Service Bus are relatively simple to get up and running in their default configurations. Things get significantly more complex when integrating them into private networks where the flow of traffic is constrained.
   
 This document explains key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall. It also goes into detail on how to achieve redundancy across multiple regions.
 
+## TOC
+
+- [Architecture](#Architecture)
+- [Recommendations](#Recommendations)
+- [Scalability Considerations](@Scalability-Considerations)
+- Availability Considerations
+- Security Considerations
+- Cost Considerations
+- DevOps Considerations
+- Deploy the Solution
+
 [top ->](#TOC)  
+## Architecture
+### Virtual Network Foundation
+![](images/networking-foundation.png)
+This guide assumes that you are deploying a solution into a networking environment with the following characteristics:
 
-## Virtual Network Foundation
-
-This guide assumes that you're trying to deploy Azure Functions into a networking environment with the following characteristics:
-
-- The general architecture we'll be building on is [Hub and Spoke.](https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology) 
-- The hub us used for hosting shared services like Azure Firewall and providing connectivity to an on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc. In our test environment, we wont bother with this. It is however possible to simulate an on premises network by using a third "on-premises" VNet and a VPN connection to the hub if desired.
-- The spoke network is used for hosting business workloads. In this case we're integrating our Function App to a subnet that sits within the spoke network.
+- [Hub and Spoke](https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology)  network architecture. 
+- The hub VNet (1) is used for hosting shared services like Azure Firewall and providing connectivity to an on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc (2). In our test environment, we will leave this out.
+- The spoke network (3) is used for hosting business workloads. In this case we're integrating our Function App to a dedicated subnet ("Integration Subnet") that sits within the spoke network. We'll use a second subnet ("Workload Subnet") for hosting other components of the solution.
 - The Hub is peered to Spoke.
-- In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress.
-- Generally, custom DNS is configured on the spoke VNet. DNS forwarders in the hub are used to provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. For our testing we'll just use the default Azure DNS resolvers.
+- In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in all connected Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress. We'll route any internet egress traffic to Azure firewall (4) where it can be filtered and audited.
+- Generally, custom DNS is configured on the spoke VNet. DNS forwarders in the hub are used to provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. In this reference implementation we'll deploy a simple BIND forwarder (5) into our hub network that will be configured to forward requests to the Azure internal resolver. This will allow us to simulate custom DNS.
+### Azure Service Bus
+### Azure Functions Producer / Consumer
+
+
+
+
 
 ### Deploy
 - Create a resource group
