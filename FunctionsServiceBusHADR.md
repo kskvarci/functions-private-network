@@ -49,19 +49,19 @@ This guide assumes that you are deploying your solution into a networking enviro
 
 	az group create --location centralus --name network-centralus-rg
 	```
-2. Deploy the base VNets and Subnets to both regions (ARM Template)
+2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json))
 	```
 	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file .\templates\base-network\azuredeploy.json
 
 	az deployment group create --resource-group network-centralus-rg --name network-centralus --template-file .\templates\base-network\azuredeploy.json
 	```
-3. Deploy and configure Azure Firewall in both regions (ARM Template)
+3. Deploy and configure Azure Firewall in both regions ([ARM Template](templates/firewall/azuredeploy.json))
 	```
 	az deployment group create --resource-group network-eastus2-rg --name firewall-eastus2 --template-file .\templates\firewall\azuredeploy.json --parameters  networkResourceGroup=network-eastus2-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
 	
 	az deployment group create --resource-group network-centralus-rg --name firewall-centralus --template-file .\templates\firewall\azuredeploy.json --parameters networkResourceGroup=network-centralus-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
 	```
-4. Deploy BIND DNS forwarders in both regions
+4. Deploy BIND DNS forwarders in both regions ([ARM Template](templates/bind-forwarder/azuredeploy.json))
 	```
 	az deployment group create --resource-group network-eastus2-rg --name bind-eastus2 --template-file .\templates\bind-forwarder\azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
 	
