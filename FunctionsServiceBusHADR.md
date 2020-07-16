@@ -20,11 +20,6 @@ We will also provide guidance on how to achieve redundancy across multiple regio
 - [DevOps Considerations](#DevOps-Considerations) 
 ## Architecture
 ### Virtual Network Foundation
-#### Requirements
-- asdf
-- asdf
-- asdf
-- asdf  
 #### Implementation
 ![](images/networking-foundation.png)
 This guide assumes that you are deploying a solution into a networking environment with the following characteristics:
@@ -119,6 +114,10 @@ ___
 ## Scalability Considerations
 ## High Availability Considerations
 ## Disaster Recovery
+### Functions and Service Bus
+![](images/networking-foundation.png)
+### Networking
+![](images/networking-multi.png)
 ## Security Considerations
 ## Cost Considerations
 ## DevOps Considerations
