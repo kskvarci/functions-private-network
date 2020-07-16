@@ -68,7 +68,7 @@ This guide assumes that you are deploying your solution into a networking enviro
 	
 	az deployment group create --resource-group network-centralus-rg --name bind-centralus --template-file .\templates\bind-forwarder\azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
 	```
-6. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions (ARM Template)
+6. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json))
 	```
 	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
 	
