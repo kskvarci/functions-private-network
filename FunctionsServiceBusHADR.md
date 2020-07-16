@@ -49,11 +49,12 @@ This guide assumes that you are deploying your solution into a networking enviro
 
 	az group create --location centralus --name network-centralus-rg
 	```
-2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json))
+2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json)) todo: make non-overlapping
 	```
-	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file .\templates\base-network\azuredeploy.json
+	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file .\templates\base-network\azuredeploy.json --parameters hubVnetPrefix="10.0.0.0/16" firewallSubnetPrefix="10.0.1.0/24" DNSSubnetPrefix="10.0.2.0/24" spokeVnetPrefix="10.1.0.0/16" workloadSubnetPrefix="10.1.2.0/24"
 
-	az deployment group create --resource-group network-centralus-rg --name network-centralus --template-file .\templates\base-network\azuredeploy.json
+	az deployment group create --resource-group network-centralus-rg --name network-centralus --template-file .\templates\base-network\azuredeploy.json --parameters hubVnetPrefix="10.2.0.0/16" firewallSubnetPrefix="10.2.1.0/24" DNSSubnetPrefix="10.2.2.0/24" spokeVnetPrefix="10.3.0.0/16" workloadSubnetPrefix="10.3.2.0/24"
+	
 	```
 3. Deploy and configure Azure Firewall in both regions ([ARM Template](templates/firewall/azuredeploy.json))
 	```
@@ -69,6 +70,9 @@ This guide assumes that you are deploying your solution into a networking enviro
 	```
 6. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions (ARM Template)
 	```
+	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
+	
+	az deployment group create --resource-group network-central-rg --name integration-centralus --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
 	```
 
 [top ->](#TOC)    
