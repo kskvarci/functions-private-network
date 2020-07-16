@@ -9,49 +9,67 @@ Azure Functions and Service Bus are relatively simple to get up and running in t
   
 This document explains key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall.
 
-We will also provide guidance on how to achieve redundancy across multiple regions while retaining the same security posture.
+We will also provide composable deployment artifacts and guidance on how to achieve redundancy across multiple regions while retaining the same security posture.
 ## TOC
+- [Pre-Reqs](Pre-Reqs)
 - [Architecture](#Architecture)
 - [Scalability Considerations](#Scalability-Considerations)
 - [High Availability Considerations](#High-Availability-Considerations)
 - [Disaster Recovery](#Disaster-Recovery)
 - [Security Considerations](#Security-Considerations)
+- [Observability Considerations](Observability-Considerations)
 - [Cost Considerations](#Cost-Considerations)
 - [DevOps Considerations](#DevOps-Considerations) 
+## Pre-Reqs
+In order to deploy examples in this article you will need:
+- An Azure Subscription and an account with Contributor level access
+- Access to a Bash (Linux machine or WSL on Windows)
+- Access to Azure DevOps (if you choose to impliment any of the pipelines)
 ## Architecture
 ### Virtual Network Foundation
 #### Implementation
 ![](images/networking-foundation.png)
-This guide assumes that you are deploying a solution into a networking environment with the following characteristics:
+This guide assumes that you are deploying your solution into a networking environment with the following characteristics:
 
 - [Hub and Spoke](https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology)  network architecture.   
 
-- The hub VNet (1) is used for hosting shared services like Azure Firewall and providing connectivity to an on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc (2). In this reference implementation, we will leave this out.  
+- The hub VNet (1) is used for hosting shared services like Azure Firewall, DNS forwarding and providing connectivity to on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc (2). In our reference examples we'll, exclude this portion of the architecture for simplicity.  
 
-- The spoke network (3) is used for hosting business workloads. In this case we're integrating our Function App to a dedicated subnet ("Integration Subnet") that sits within the spoke network. We'll use a second subnet ("Workload Subnet") for hosting other components of the solution.  
+- The spoke network (3) is used for hosting business workloads. In this case we're integrating our Function App to a dedicated subnet ("Integration Subnet") that sits within the spoke network. We'll use a second subnet ("Workload Subnet") for hosting other components of the solution including private endpoints for our Service Bus namespaces, etc.  
 
-- The Hub is peered to Spoke.  
+- The Hub is peered to Spoke using Azure VNet Peering.  
 
 - In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in all connected Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress. We'll route any internet egress traffic to Azure firewall (4) using a UDR where it can be filtered and audited.  
 
 - Generally, custom DNS is configured on the spoke VNet settings. DNS forwarders in the hub are referenced. These forwarders  provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. In this reference implementation we'll deploy a simple BIND forwarder (5) into our hub network that will be configured to forward requests to the Azure internal resolver. 
 #### Deploy
-1. Create a resource group
+1. Create a resource group for each region's network resources
 	```
-	```
-2. Deploy the base VNets and Subnets (ARM Template)
-	```
-	```
-3. Deploy and Configure the Integration Subnet for Regional VNet Integration (ARM Template)
-	```
-	```
-4. Deploy and configure Azure Firewall (ARM Template)
-	```
-	```
+	az group create --location eastus2 --name network-eastus2-rg  
 
-___
-[Deploy steps 2-3 in one step.](link_url)
-___
+	az group create --location centralus --name network-centralus-rg
+	```
+2. Deploy the base VNets and Subnets to both regions (ARM Template)
+	```
+	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file .\templates\base-network\azuredeploy.json
+
+	az deployment group create --resource-group network-centralus-rg --name network-centralus --template-file .\templates\base-network\azuredeploy.json
+	```
+3. Deploy and configure Azure Firewall in both regions (ARM Template)
+	```
+	az deployment group create --resource-group network-eastus2-rg --name firewall-eastus2 --template-file .\templates\firewall\azuredeploy.json --parameters  networkResourceGroup=network-eastus2-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
+	
+	az deployment group create --resource-group network-centralus-rg --name firewall-centralus --template-file .\templates\firewall\azuredeploy.json --parameters networkResourceGroup=network-centralus-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
+	```
+4. Deploy BIND DNS forwarders in both regions
+	```
+	az deployment group create --resource-group network-eastus2-rg --name bind-eastus2 --template-file .\templates\bind-forwarder\azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
+	
+	az deployment group create --resource-group network-centralus-rg --name bind-centralus --template-file .\templates\bind-forwarder\azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
+	```
+6. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions (ARM Template)
+	```
+	```
 
 [top ->](#TOC)    
 ### Azure Service Bus
@@ -93,6 +111,12 @@ ___
 
 ### Azure Functions Producer / Consumer
 #### Requirements
+##### Messaging
+- All Entities must be available in both regions
+- Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
+##### Functions
+- All Entities must be available in both regions
+- Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
 #### Implementation
 #### Deploy
 1. tbd
@@ -115,10 +139,14 @@ ___
 ## High Availability Considerations
 ## Disaster Recovery
 ### Functions and Service Bus
+#### Requirements
+#### Implementation
 ![](images/networking-foundation.png)
+#### Deploy
 ### Networking
 ![](images/networking-multi.png)
 ## Security Considerations
+## Observability Considerations
 ## Cost Considerations
 ## DevOps Considerations
 

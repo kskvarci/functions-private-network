@@ -9,77 +9,44 @@
                 "description": "Azure region"
             }
         },
-       "sourceIp": {
-            "type": "string",
-            "metadata": {
-                "description": "IP to let in to NSGs for testing"
-            }
-        },
         "hubVnetPrefix": {
             "type": "string",
             "defaultValue": "10.0.0.0/16",
             "metadata": {
-                "description": "IP to let in to NSGs for testing"
+                "description": "hubVnetPrefix"
             }
         },
         "firewallSubnetPrefix": {
             "type": "string",
             "defaultValue": "10.0.1.0/24",
             "metadata": {
-                "description": "IP to let in to NSGs for testing"
+                "description": "firewallSubnetPrefix"
+            }
+        },
+        "DNSSubnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.2.0/24",
+            "metadata": {
+                "description": "DNSSubnetPrefix"
             }
         },
         "spokeVnetPrefix": {
             "type": "string",
             "defaultValue": "10.1.0.0/16",
             "metadata": {
-                "description": "IP to let in to NSGs for testing"
-            }
-        },
-        "integrationSubnetPrefix": {
-            "type": "string",
-            "defaultValue": "10.1.1.0/24",
-            "metadata": {
-                "description": "IP to let in to NSGs for testing"
+                "description": "spokeVnetPrefix"
             }
         },
         "workloadSubnetPrefix": {
             "type": "string",
             "defaultValue": "10.1.2.0/24",
             "metadata": {
-                "description": "IP to let in to NSGs for testing"
+                "description": "workloadSubnetPrefix"
             }
         } 
     },
     "variables": {},
     "resources": [
-        {
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2019-11-01",
-            "name": "jumpbox-nsg",
-            "location": "[parameters('location')]",
-            "properties": {
-                "securityRules": [
-                    {
-                        "name": "ssh-inbound",
-                        "properties": {
-                            "protocol": "*",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "*",
-                            "sourceAddressPrefix": "[parameters('sourceIp')]",
-                            "destinationAddressPrefix": "VirtualNetwork",
-                            "access": "Allow",
-                            "priority": 100,
-                            "direction": "Inbound",
-                            "sourcePortRanges": [],
-                            "destinationPortRanges": [],
-                            "sourceAddressPrefixes": [],
-                            "destinationAddressPrefixes": []
-                        }
-                    }
-                ]
-            }
-        },
         {
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2019-11-01",
@@ -112,6 +79,15 @@
                             "privateEndpointNetworkPolicies": "Enabled",
                             "privateLinkServiceNetworkPolicies": "Enabled"
                         }
+                    },
+                    {
+                        "name": "DNSSubnet",
+                        "properties": {
+                            "addressPrefix":  "[parameters('DNSSubnetPrefix')]",
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Enabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        }
                     }
                 ],
                 "enableDdosProtection": false,
@@ -134,16 +110,6 @@
                     ]
                 },
                 "subnets": [
-                    {
-                        "name": "integration-subnet",
-                        "properties": {
-                            "addressPrefix": "[parameters('integrationSubnetPrefix')]",
-                            "serviceEndpoints": [],
-                            "delegations": [],
-                            "privateEndpointNetworkPolicies": "Enabled",
-                            "privateLinkServiceNetworkPolicies": "Enabled"
-                        }
-                    },
                     {
                         "name": "workload-subnet",
                         "properties": {

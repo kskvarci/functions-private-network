@@ -2,14 +2,64 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Azure region"
+            }
+        },
+        "firewallName": {
+            "type": "string",
+            "defaultValue": "firewall",
+            "metadata": {
+                "description": "firewallName"
+            }
+        },
+        "firewallPipName": {
+            "type": "string",
+            "defaultValue": "firewall-pip",
+            "metadata": {
+                "description": "firewallPipName"
+            }
+        },
+        "vnetName": {
+            "defaultValue": "[resourceGroup().location]",
+            "type": "String"
+        },
+        "subnetName": {
+            "defaultValue": "[resourceGroup().location]",
+            "type": "String"
+        },
+        "networkResourceGroup": {
+            "type": "String"
+        }
     },
     "variables": {},
     "resources": [
         {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2020-05-01",
+            "name": "[parameters('firewallPipName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+            }
+        },
+        {
             "type": "Microsoft.Network/azureFirewalls",
             "apiVersion": "2020-04-01",
-            "name": "[parameters('azureFirewalls_FirewallE2_name')]",
-            "location": "eastus2",
+            "name": "[parameters('firewallName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('firewallPipName'))]"
+            ],
+            "location": "[parameters('location')]",
             "properties": {
                 "sku": {
                     "name": "AZFW_VNet",
@@ -22,10 +72,10 @@
                         "name": "Firewalle2",
                         "properties": {
                             "publicIPAddress": {
-                                "id": "[parameters('publicIPAddresses_Firewalle2_externalid')]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('firewallPipName'))]"
                             },
                             "subnet": {
-                                "id": "[concat(parameters('virtualNetworks_hub_vnet_externalid'), '/subnets/AzureFirewallSubnet')]"
+                                "id": "[concat(resourceId(parameters('networkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/', parameters('subnetName') )]"
                             }
                         }
                     }
