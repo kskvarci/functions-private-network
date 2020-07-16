@@ -13,11 +13,9 @@
             "type": "String"
         },
         "vnetName": {
-            "defaultValue": "[resourceGroup().location]",
             "type": "String"
         },
         "subnetName": {
-            "defaultValue": "[resourceGroup().location]",
             "type": "String"
         },
         "networkResourceGroup": {

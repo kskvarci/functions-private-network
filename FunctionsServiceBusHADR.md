@@ -74,7 +74,7 @@ This guide assumes that you are deploying your solution into a networking enviro
 	```
 	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
 	
-	az deployment group create --resource-group network-central-rg --name integration-centralus --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
+	az deployment group create --resource-group network-centralus-rg --name integration-centralus --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
 	```
 
 [top ->](#TOC)    
@@ -83,6 +83,7 @@ This guide assumes that you are deploying your solution into a networking enviro
 - Predictable / Consistent Performance
 - Direct integration to and accessibility from private networks
 - No accessibility from public networks
+- Cross Region Entity Replication
 
 #### Implementation
 ![](images/networking-servicebus.png)  
@@ -98,11 +99,21 @@ In our reference implementation we will be deploying a Premium namespace. This i
 
 - A private DNS zone (3), requisite A record and VNet link will be created such that queries originating from any VNet that is configured to use our central DNS server will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.    
 #### Deploy
-1. Create the Namespace
+1. Create resource groups for our reference workload
 	```
+	az group create --location eastus2 --name refworkload-eastus2-rg  
+
+	az group create --location centralus --name refworkload-centralus-rg
+	```
+3. Create the Namespaces ([ARM Template](templates/service-bus/azuredeploy-namespace.json))
+	```
+	az deployment group create --resource-group refworkload-eastus2-rg --name namespace-eastus2 --template-file .\templates\service-bus\azuredeploy-namespace.json --parameters namespaceName=kskrefns1
+	
+	az deployment group create --resource-group refworkload-centralus-rg --name namespace-centralus --template-file .\templates\service-bus\azuredeploy-namespace.json --parameters namespaceName=kskrefns2
 	```
 2. Enable Private Link
 	```
+	az deployment group create --resource-group refworkload-eastus2-rg --name namespace-eastus2 --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=centraltocentral privateDnsZoneName  vnetName subnetName networkResourceGroup namespaceResourceGroup primary
 	```
 3. Link the Private DNS Zone
 	```
