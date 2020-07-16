@@ -51,7 +51,7 @@ This guide assumes that you are deploying your solution into a networking enviro
 
 	az group create --location centralus --name network-centralus-rg
 	```
-2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json)) todo: make non-overlapping
+2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json))
 	```
 	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file .\templates\base-network\azuredeploy.json --parameters hubVnetPrefix="10.0.0.0/16" firewallSubnetPrefix="10.0.1.0/24" DNSSubnetPrefix="10.0.2.0/24" spokeVnetPrefix="10.1.0.0/16" workloadSubnetPrefix="10.1.2.0/24"
 
@@ -93,11 +93,12 @@ When creating a namespace in a single region, there are relatively few decisions
 
 In our reference implementation we will be deploying a Premium namespace. This is the tier that is recommended for most production workloads due to it's performance characteristics. In addition, the Premium tier supports VNet integration which allows us to isolate the namespace to a private network. This is key to achieving our overall security objectives.   
   
-- We'll create a namespace A in East US 2 (1)  
+- We'll create a namespace in both regions. (1)  
 
-- The namespace will be set up with a private endpoint (2) in the spoke workload subnet. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the internet.  
+- The namespace will be set up with two private endpoints each. One in region that the namespace is deployed in (2) and one in the other region (3). This will allow private access from both regions. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the internet.    
+TODO: Elaborate on this path vs via ER GW.
 
-- A private DNS zone (3), requisite A record and VNet link will be created such that queries originating from any VNet that is configured to use our central DNS server will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.    
+- A private DNS zone (4), requisite A record and VNet link will be created such that queries originating from any VNet that is configured to use our bind forwarders will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.    
 #### Deploy
 1. Create resource groups for our reference workload
 	```
