@@ -93,7 +93,9 @@ When creating a namespace in a single region, there are relatively few decisions
 
 In our reference implementation we will be deploying a Premium namespace. This is the tier that is recommended for most production workloads due to it's performance characteristics. In addition, the Premium tier supports VNet integration which allows us to isolate the namespace to a private network. This is key to achieving our overall security objectives.   
   
-- We'll create a namespace in both regions. (1)  
+- We'll create a namespace in both regions. (1)   
+
+- We'll configure geo-redundancy (2) with the EastUS2 namespace being primary and the CentralUS namespace being secondary. This will replicate all entity information between regions (but not messages).
 
 - The namespace will be set up with two private endpoints each. One in region that the namespace is deployed in (2) and one in the other region (3). This will allow private access from both regions. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the internet.    
 TODO: Elaborate on this path vs via ER GW.
