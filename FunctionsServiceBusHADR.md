@@ -45,37 +45,32 @@ This guide assumes that you are deploying your solution into a networking enviro
 
 - We'll deploy an identical configuration across two regions.
 #### Deploy
-1. Create a resource group for each region's network resources
+1. ==Create a resource group for each region's network resources==
 	```bash
 	az group create --location eastus2 --name network-eastus2-rg  
 
 	az group create --location centralus --name network-centralus-rg
 	```
-2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json))
+2. ==Deploy the base VNets and Subnets to both regions== ([ARM Template](templates/base-network/azuredeploy.json))
 	```bash
 	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file .\templates\base-network\azuredeploy.json --parameters hubVnetPrefix="10.0.0.0/16" firewallSubnetPrefix="10.0.1.0/24" DNSSubnetPrefix="10.0.2.0/24" spokeVnetPrefix="10.1.0.0/16" workloadSubnetPrefix="10.1.2.0/24"
 
 	az deployment group create --resource-group network-centralus-rg --name network-centralus --template-file .\templates\base-network\azuredeploy.json --parameters hubVnetPrefix="10.2.0.0/16" firewallSubnetPrefix="10.2.1.0/24" DNSSubnetPrefix="10.2.2.0/24" spokeVnetPrefix="10.3.0.0/16" workloadSubnetPrefix="10.3.2.0/24"
 	
 	```
-3. Deploy and configure Azure Firewall in both regions ([ARM Template](templates/firewall/azuredeploy.json))
+3. ==Deploy and configure Azure Firewall in both regions== ([ARM Template](templates/firewall/azuredeploy.json))
 	```bash
 	az deployment group create --resource-group network-eastus2-rg --name firewall-eastus2 --template-file .\templates\firewall\azuredeploy.json --parameters  networkResourceGroup=network-eastus2-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
 	
 	az deployment group create --resource-group network-centralus-rg --name firewall-centralus --template-file .\templates\firewall\azuredeploy.json --parameters networkResourceGroup=network-centralus-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
 	```
-4. Deploy BIND DNS forwarders in both regions ([ARM Template](templates/bind-forwarder/azuredeploy.json))
+4. ==Deploy BIND DNS forwarders in both regions== ([ARM Template](templates/bind-forwarder/azuredeploy.json))
 	```bash
 	az deployment group create --resource-group network-eastus2-rg --name bind-eastus2 --template-file .\templates\bind-forwarder\azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
 	
 	az deployment group create --resource-group network-centralus-rg --name bind-centralus --template-file .\templates\bind-forwarder\azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
 	```
-6. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json))
-	```bash
-	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
-	
-	az deployment group create --resource-group network-centralus-rg --name integration-centralus --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
-	```
+
 
 [top ->](#TOC)    
 ### Azure Service Bus
@@ -102,13 +97,29 @@ TODO: Elaborate on this path vs via ER GW.
 
 - A set of private DNS zones (5), requisite A records and VNet links will be created such that queries originating from any VNet that is configured to use our bind forwarders will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.    
 #### Deploy
-1. Create resource groups for our reference workload
+1. ==Create resource groups for our reference workload==
 	```bash
 	# for East resources
 	az group create --location eastus2 --name refworkload-eastus2-rg  
 
 	# for Central resources
 	az group create --location centralus --name refworkload-centralus-rg
+	```
+2. ==Create Private DNS Zone for Service Bus==
+	```bash
+	# for East
+	az deployment group create --resource-group refworkload-eastus2-rg --name zone-eastus2 --template-file .\templates\service-bus\azuredeploy-privatezone.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net   
+
+	# for Central
+	az deployment group create --resource-group refworkload-centralus-rg --name zone-centralus --template-file .\templates\service-bus\azuredeploy-privatezone.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net 
+	```
+3. ==Link the Private DNS Zones== ([ARM Template](templates/service-bus/azuredeploy-zonelink.json))
+	```bash
+	# Link the East Zone to the East DNS Network
+	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file .\templates\service-bus\azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-eastus2-rg
+	
+	# Link the Central Zone to the Central DNS Network
+	az deployment group create --resource-group refworkload-centralus-rg --name link-east --template-file .\templates\service-bus\azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-centralus-rg
 	```
 3. Create the Namespaces ([ARM Template](templates/service-bus/azuredeploy-namespace.json))
 	```bash
@@ -118,7 +129,7 @@ TODO: Elaborate on this path vs via ER GW.
 	# Central namespace
 	az deployment group create --resource-group refworkload-centralus-rg --name namespace-centralus --template-file .\templates\service-bus\azuredeploy-namespace.json --parameters namespaceName=kskrefns2
 	```
-2. Enable Private Link Endpoints (two per region)([ARM Template](templates/service-bus/azuredeploy-privatelink.json))
+2. Enable Private Endpoints (two per region)([ARM Template](templates/service-bus/azuredeploy-privatelink.json))
 	```bash
 	# Central to Central
 	az deployment group create --resource-group refworkload-centralus-rg --name plink-centralcentral --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=centraltocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-centralus-rg namespaceResourceGroup=refworkload-centralus-rg primary=true  
@@ -132,14 +143,7 @@ TODO: Elaborate on this path vs via ER GW.
 	# East to Central
 	az deployment group create --resource-group refworkload-eastus2-rg --name plink-eastcentral --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=easttocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-eastus2-rg namespaceResourceGroup=refworkload-centralus-rg primary=true
 	```
-3. Link the Private DNS Zone ([ARM Template](templates/service-bus/azuredeploy-zonelink.json))
-	```bash
-	# Link the East Zone to the East DNS Network
-	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file .\templates\service-bus\azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-eastus2-rg
-	
-	# Link the Central Zone to the Central DNS Network
-	az deployment group create --resource-group refworkload-centralus-rg --name link-east --template-file .\templates\service-bus\azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-centralus-rg
-	```
+
 4. Establish Geo-Redundancy ([ARM Template](templates/service-bus/azuredeploy-georeplication.json))
 	```bash
 	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file .\templates\service-bus\azuredeploy-georeplication.json --parameters namespaceName=kskrefns1 pairedNamespaceResourceGroup=refworkload-centralus-rg pairedNamespaceName=kskrefns2 aliasName=kskrefns
@@ -161,8 +165,11 @@ TODO: Elaborate on this path vs via ER GW.
 - Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
 #### Implementation
 #### Deploy
-1. tbd
+1. ==Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions== ([ARM Template](templates/integration-subnet/azuredeploy.json))
 	```bash
+	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
+	
+	az deployment group create --resource-group network-centralus-rg --name integration-centralus --template-file .\templates\integration-subnet\azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
 	```
 2. tbd
 	```bash
