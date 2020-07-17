@@ -2,72 +2,40 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "location": {
-            "type": "string",
-            "defaultValue": "[resourceGroup().location]",
-            "metadata": {
-                "description": "Azure region"
-            }
-        },
-        "appServicePlanName": {
-            "defaultValue": "function-app-demo-asp",
+        "appName": {
             "type": "String"
         },
-        "functionAppName": {
-            "defaultValue": "function-app-demo-ksk",
+        "planName": {
+            "type": "String"
+        },
+        "location": {
+            "defaultValue": "[resourceGroup().location]",
             "type": "String"
         }
     },
     "variables": {},
     "resources": [
         {
-            "type": "Microsoft.Web/serverfarms",
-            "apiVersion": "2018-02-01",
-            "name": "[parameters('appServicePlanName')]",
-            "location": "[parameters('location')]",
-            "sku": {
-                "name": "P1v2",
-                "tier": "PremiumV2",
-                "size": "P1v2",
-                "family": "Pv2",
-                "capacity": 1
-            },
-            "kind": "app",
-            "properties": {
-                "perSiteScaling": false,
-                "maximumElasticWorkerCount": 1,
-                "isSpot": false,
-                "reserved": false,
-                "isXenon": false,
-                "hyperV": false,
-                "targetWorkerCount": 0,
-                "targetWorkerSizeId": 0
-            }
-        },
-        {
             "type": "Microsoft.Web/sites",
             "apiVersion": "2018-11-01",
-            "name": "[parameters('functionAppName')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]"
-            ],
+            "name": "[parameters('appName')]",
             "location": "[parameters('location')]",
             "kind": "functionapp",
             "properties": {
                 "enabled": true,
                 "hostNameSslStates": [
                     {
-                        "name": "[concat(parameters('functionAppName'), '.azurewebsites.net')]",
+                        "name": "[concat(parameters('appName'), '.azurewebsites.net')]",
                         "sslState": "Disabled",
                         "hostType": "Standard"
                     },
                     {
-                        "name": "[concat(parameters('functionAppName'), '.scm.azurewebsites.net')]",
+                        "name": "[concat(parameters('appName'), '.scm.azurewebsites.net')]",
                         "sslState": "Disabled",
                         "hostType": "Repository"
                     }
                 ],
-                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('appServicePlanName'))]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
                 "reserved": false,
                 "isXenon": false,
                 "hyperV": false,
@@ -85,13 +53,13 @@
         {
             "type": "Microsoft.Web/sites/config",
             "apiVersion": "2018-11-01",
-            "name": "[concat(parameters('functionAppName'), '/web')]",
-            "location": "East US 2",
+            "name": "[concat(parameters('appName'), '/web')]",
+            "location": "[parameters('location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', parameters('functionAppName'))]"
+                "[resourceId('Microsoft.Web/sites', parameters('appName'))]"
             ],
             "properties": {
-                "numberOfWorkers": 1,
+                "numberOfWorkers": -1,
                 "defaultDocuments": [
                     "Default.htm",
                     "Default.html",
@@ -110,17 +78,17 @@
                 "httpLoggingEnabled": false,
                 "logsDirectorySizeLimit": 35,
                 "detailedErrorLoggingEnabled": false,
-                "publishingUsername": "$funcpattern",
+                "publishingUsername": "$kskrefeastus2",
                 "scmType": "None",
                 "use32BitWorkerProcess": true,
                 "webSocketsEnabled": false,
-                "alwaysOn": true,
+                "alwaysOn": false,
                 "managedPipelineMode": "Integrated",
                 "virtualApplications": [
                     {
                         "virtualPath": "/",
                         "physicalPath": "site\\wwwroot",
-                        "preloadEnabled": true
+                        "preloadEnabled": false
                     }
                 ],
                 "loadBalancing": "LeastRequests",
@@ -128,7 +96,6 @@
                     "rampUpRules": []
                 },
                 "autoHealEnabled": false,
-                "vnetName": "9a351fcf-9d96-4e62-889f-6e0e299f9d61_integration-subnet",
                 "cors": {
                     "allowedOrigins": [
                         "https://functions.azure.com",
@@ -160,9 +127,7 @@
                 "http20Enabled": false,
                 "minTlsVersion": "1.2",
                 "ftpsState": "AllAllowed",
-                "reservedInstanceCount": 0,
-                "vnetResourceId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'spoke-vnet', 'integration-subnet')]",
-                "isSwift": true
+                "reservedInstanceCount": 1
             }
         }
     ]

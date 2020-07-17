@@ -177,13 +177,20 @@ TODO: Elaborate on this path vs via ER GW.
 	
 	az deployment group create --resource-group network-centralus-rg --name integration-centralus --template-file ./templates/integration-subnet/azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
 	```
-2. Deploy 
+2. Deploy App Service Plans
 	```bash
+	# East
+	az deployment group create --resource-group network-eastus2-rg --name appplan-eastus2 --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefeastus2"
+	
+	# Central
+	az deployment group create --resource-group network-centralus-rg --name appplan-centralus --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefcentralus"
 	```
-3. tbd
+3. Deploy Function Apps
 	```bash
+	# Central
+	az deployment group create --resource-group network-centralus-rg --name app-centralus --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefcentralus" appName="kskrefcentralus"
 	```
-4. tbd
+4. Enable Regional VNet Integration
 	```bash
 	```
 ___
