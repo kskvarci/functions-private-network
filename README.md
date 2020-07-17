@@ -1,121 +1,239 @@
-# Azure Functions in a Private Network
+# Serverless Producer / Consumer Pattern in a Locked Down Network
+Many cloud native applications are expected to handle a large number of requests. Rather than process each request synchronously, a common technique is for the application to pass them through a messaging system to another service (a consumer service) that handles them asynchronously. This strategy helps to ensure that the business logic in the application isn't blocked while the requests are being processed. For full details on this pattern see the [following article](https://docs.microsoft.com/en-us/azure/architecture/patterns/competing-consumers).
 
+On Azure, the primary enterprise messaging service is [Azure Service Bus](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-overview).
+
+[Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/#:~:text=Azure%20Functions%20Documentation.%20Azure%20Functions%20is%20a%20serverless,code%20in%20response%20to%20a%20variety%20of%20events.) offers a convenient compute platform from which to implement a producer consumer pattern with relatively little underlying infrastructure management.
+
+Azure Functions and Service Bus are relatively simple to get up and running in their default configurations. Things get significantly more complex when implementing them in environments with stringent security requirements that dictate more aggressive network perimeter security and segmentation.
+  
+This document explains key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall.
+
+We will also provide composable deployment artifacts and guidance on how to achieve redundancy across multiple regions while retaining the same security posture.
 ## TOC
+- [Pre-Reqs](Pre-Reqs)
+- [Architecture](#Architecture)
+- [Scalability Considerations](#Scalability-Considerations)
+- [High Availability Considerations](#High-Availability-Considerations)
+- [Disaster Recovery](#Disaster-Recovery)
+- [Security Considerations](#Security-Considerations)
+- [Observability Considerations](Observability-Considerations)
+- [Cost Considerations](#Cost-Considerations)
+- [DevOps Considerations](#DevOps-Considerations) 
+## Pre-Reqs
+In order to deploy examples in this article you will need:
+- An Azure Subscription and an account with Contributor level access
+- Access to a Bash (Linux machine or WSL on Windows)
+- Access to Azure DevOps (if you choose to impliment any of the pipelines)
+## Architecture
+### Virtual Network Foundation
+#### Implementation
+![](images/networking-foundation.png)
+This guide assumes that you are deploying your solution into a networking environment with the following characteristics:
 
-[Overview](#Overview)
+- [Hub and Spoke](https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology)  network architecture.   
 
-[Virtual Network Foundation](#Virtual-Network-Foundation)
+- The hub VNet (1) is used for hosting shared services like Azure Firewall, DNS forwarding and providing connectivity to on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc (2). In our reference examples we'll, exclude this portion of the architecture for simplicity.  
 
-[Deploying a base Function App](#Deploying-a-base-Function-App)
+- The spoke network (3) is used for hosting business workloads. In this case we're integrating our Function App to a dedicated subnet ("Integration Subnet") that sits within the spoke network. We'll use a second subnet ("Workload Subnet") for hosting other components of the solution including private endpoints for our Service Bus namespaces, etc.  
 
-[Monitoring Setup](#Monitoring-Setup)
+- The Hub is peered to Spoke using Azure VNet Peering.  
 
-[Triggers and Bindings](#Triggers-and-Bindings)
+- In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in all connected Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress. We'll route any internet egress traffic to Azure firewall (4) using a UDR (5) where it can be filtered and audited.  
 
-## Overview
+- Generally, custom DNS is configured on the spoke VNet settings. DNS forwarders in the hub are referenced. These forwarders  provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. In this reference implementation we'll deploy a simple BIND forwarder (6) into our hub network that will be configured to forward requests to the Azure internal resolver.   
 
-Azure functions are  simple to get up and running in their default configuration. Things get significantly more complex when integrating into private networks where the flow of traffic is controlled more granularly. Below is a diagram showing a fully locked down implementation for a single region in Azure. We'll walk through simulating this in a test environment.
+- We'll deploy an identical configuration across two regions.
+#### Deploy
+1. Create a resource group for each region's network resources
+	```bash
+	az group create --location eastus2 --name network-eastus2-rg  
 
-![](images/All.PNG "full deployment")
+	az group create --location centralus --name network-centralus-rg
+	```
+2. Deploy the base VNets and Subnets to both regions ([ARM Template](templates/base-network/azuredeploy.json))
+	```bash
+	az deployment group create --resource-group network-eastus2-rg --name network-eastus2 --template-file ./templates/base-network/azuredeploy.json --parameters hubVnetPrefix="10.0.0.0/16" firewallSubnetPrefix="10.0.1.0/24" DNSSubnetPrefix="10.0.2.0/24" spokeVnetPrefix="10.1.0.0/16" workloadSubnetPrefix="10.1.2.0/24"
 
-[top ->](#TOC)
+	az deployment group create --resource-group network-centralus-rg --name network-centralus --template-file ./templates/base-network/azuredeploy.json --parameters hubVnetPrefix="10.2.0.0/16" firewallSubnetPrefix="10.2.1.0/24" DNSSubnetPrefix="10.2.2.0/24" spokeVnetPrefix="10.3.0.0/16" workloadSubnetPrefix="10.3.2.0/24"
+	
+	```
+3. Deploy and configure Azure Firewall in both regions ([ARM Template](templates/firewall/azuredeploy.json))
+	```bash
+	az deployment group create --resource-group network-eastus2-rg --name firewall-eastus2 --template-file ./templates/firewall/azuredeploy.json --parameters  networkResourceGroup=network-eastus2-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
+	
+	az deployment group create --resource-group network-centralus-rg --name firewall-centralus --template-file ./templates/firewall/azuredeploy.json --parameters networkResourceGroup=network-centralus-rg vnetName=hub-vnet subnetName=AzureFirewallSubnet
+	```
+4. Deploy BIND DNS forwarders in both regions ([ARM Template](templates/bind-forwarder/azuredeploy.json))
+	```bash
+	az deployment group create --resource-group network-eastus2-rg --name bind-eastus2 --template-file ./templates/bind-forwarder/azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
+	
+	az deployment group create --resource-group network-centralus-rg --name bind-centralus --template-file ./templates/bind-forwarder/azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
+	```
 
-## Virtual Network Foundation
 
-This guide assumes that you're trying to deploy Azure Functions into a networking environment with the following characteristics:
+[top ->](#TOC)    
+### Azure Service Bus
+#### Requirements
+- Predictable / Consistent Performance
+- Direct integration to and accessibility from private networks
+- No accessibility from public networks
+- Cross Region Entity Replication
 
-- The general architecture is [Hub and Spoke.](https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/hub-spoke-network-topology) 
-- The hub us used for hosting shared services like Azure Firewall and providing connectivity to an on-premises networks. In a real implementation, the hub network would be connected to an on-premises network via ExpressRoute, S2S VPN, etc. In our test environment, we wont bother with this. It is however possible to simulate an on premises network by using a third "on-premises" VNet and a VPN connection to the hub if desired.
-- The spoke network is used for hosting business workloads. In this case we're integrating our Function App to a subnet that sits within the spoke network.
-- The Hub is peered to Spoke.
-- In many locked down environments [Forced tunneling](https://docs.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-forced-tunneling-rm) is in place. E.G. routes are being published over ExpressRoute via BGP that override the default 0.0.0.0/0 -> Internet system route in Azure subnets. The effect is that there is **no** direct route to the internet from within Azure subnets. Internet destined traffic is sent to the VPN/ER gateway. We can simulate this in a test environment by using restrictive NSGs and Firewall rules to prohibit internet egress.
-- Generally, custom DNS is configured on the spoke VNet. DNS forwarders in the hub are used to provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. For our testing we'll just use the default Azure DNS resolvers.
+#### Implementation
+![](images/networking-servicebus.png)  
+The base-level resource for Azure Service Bus is a Service Bus Namespace. Namespaces contain the entities that we will be working with ( Queues, Topics and Subscriptions ).
 
-------
+When creating a namespace in a single region, there are relatively few decisions you'll need to make. You will need to specify the name, pricing tier, initial scale and redundancy settings, subscription, resource group and location.
 
-To deploy a simple hub and spoke network for testing you can use [this ARM template](templates/base-network/azuredeploy.json).
+In our reference implementation we will be deploying a Premium namespace. This is the tier that is recommended for most production workloads due to it's performance characteristics. In addition, the Premium tier supports VNet integration which allows us to isolate the namespace to a private network. This is key to achieving our overall security objectives.   
+  
+- We'll create a namespace in both regions. (1)   
 
-------
+- We'll configure geo-redundancy (2) with the EastUS2 namespace being primary and the CentralUS namespace being secondary. This will replicate all entity information between regions (but not messages).
 
-[top ->](#TOC)
+- The namespace will be set up with two private endpoints each. One in region that the namespace is deployed in (3) and one in the other region (4). This will allow private access from both regions. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the internet.    
+TODO: Elaborate on this path vs via ER GW.
 
-## Deploying a base Function App
+- A set of private DNS zones (5), requisite A records and VNet links will be created such that queries originating from any VNet that is configured to use our bind forwarders will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.    
+#### Deploy
+1. Create resource groups for our reference workload
+	```bash
+	# for East resources
+	az group create --location eastus2 --name refworkload-eastus2-rg  
 
-1. Create a subnet in your spoke called "integration-subnet". This subnet will be use for your Function App's regional VNet Integration.
+	# for Central resources
+	az group create --location centralus --name refworkload-centralus-rg
+	```
+2. Create Private DNS Zone for Service Bus
+	```bash
+	# for East
+	az deployment group create --resource-group refworkload-eastus2-rg --name zone-eastus2 --template-file ./templates/service-bus/azuredeploy-privatezone.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net   
 
-2. Set up service endpoints. To make this simple, we'll enable endpoints in the integration subnet for all common services that the function host might need to access via bindings, triggers or normal operations. These include: *Microsoft.Storage*, *Microsoft.AzureCosmosDB*, *Microsoft.EventHub*, *Microsoft.ServiceBus* and *Microsoft.Web*. These service endpoints are needed for the function host which is running on the function app to communicate with services via regional VNet integration.
+	# for Central
+	az deployment group create --resource-group refworkload-centralus-rg --name zone-centralus --template-file ./templates/service-bus/azuredeploy-privatezone.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net 
+	```
+3. Link the Private DNS Zones ([ARM Template](templates/service-bus/azuredeploy-zonelink.json))
+	```bash
+	# Link the East Zone to the East DNS Network
+	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file ./templates/service-bus/azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-eastus2-rg
+	
+	# Link the Central Zone to the Central DNS Network
+	az deployment group create --resource-group refworkload-centralus-rg --name link-east --template-file ./templates/service-bus/azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-centralus-rg
+	```
+3. Create the Namespaces ([ARM Template](templates/service-bus/azuredeploy-namespace.json))
+	```bash
+	# East namespace
+	az deployment group create --resource-group refworkload-eastus2-rg --name namespace-eastus2 --template-file ./templates/service-bus/azuredeploy-namespace.json --parameters namespaceName=kskrefns1  
 
-3. Create an NSG named "integration-subnet-nsg" and apply it to "integration-subnet".
+	# Central namespace
+	az deployment group create --resource-group refworkload-centralus-rg --name namespace-centralus --template-file ./templates/service-bus/azuredeploy-namespace.json --parameters namespaceName=kskrefns2
+	```
+2. Enable Private Endpoints (two per region)([ARM Template](templates/service-bus/azuredeploy-privatelink.json))
+	```bash
+	# Central to Central
+	az deployment group create --resource-group refworkload-centralus-rg --name plink-centralcentral --template-file ./templates/service-bus/azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=centraltocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-centralus-rg namespaceResourceGroup=refworkload-centralus-rg primary=true  
 
-4. Add a rule to the NSG to deny all traffic from VirtualNetwork to Internet on all ports (*). Set the priority to 500. This will force us to explicitly allow all outbound flows. Setting the rule with a priority of 500 gives us room to create rules above it to open targeted flows.
+	# Central to East
+	az deployment group create --resource-group refworkload-centralus-rg --name plink-centraleast --template-file ./templates/service-bus/azuredeploy-privatelink.json --parameters namespaceName=kskrefns1 privateEndpointName=centraltoeast privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-centralus-rg namespaceResourceGroup=refworkload-eastus2-rg primary=true  
 
-5. Add NSG rules for the above services on "integration-subnet-nsg" . Add outbound rules to allow traffic to the above services using each services service tag: *Storage*, *AzureCosmosDB*, *EventHub*, *ServiceBus* and *AppService*. Make sure these rules all sit above the internet deny rule. E.G < 500 from a priority perspective. These rules are needed in tandem with the service endpoints to allow the function host access to the services. See the below ARM template for specifics on ports, etc.
+	# East to East
+	az deployment group create --resource-group refworkload-eastus2-rg --name plink-easteast --template-file ./templates/service-bus/azuredeploy-privatelink.json --parameters namespaceName=kskrefns1 privateEndpointName=easttoeast privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-eastus2-rg namespaceResourceGroup=refworkload-eastus2-rg primary=true  
 
-   ------
+	# East to Central
+	az deployment group create --resource-group refworkload-eastus2-rg --name plink-eastcentral --template-file ./templates/service-bus/azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=easttocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-eastus2-rg namespaceResourceGroup=refworkload-centralus-rg primary=true
+	```
 
-   Use this [ARM template](templates/integration-subnet/azuredeploy.json) to create and configure the above subnet.
+4. Establish Geo-Redundancy ([ARM Template](templates/service-bus/azuredeploy-georeplication.json))
+	```bash
+	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file ./templates/service-bus/azuredeploy-georeplication.json --parameters namespaceName=kskrefns1 pairedNamespaceResourceGroup=refworkload-centralus-rg pairedNamespaceName=kskrefns2 aliasName=kskrefns
+	```
+5. Create a test queue and topic in the primary namespace ([ARM Template](templates/service-bus/azuredeploy-queuestopics.json))
+	```bash
+	 az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file ./templates/service-bus/azuredeploy-queuestopics.json --parameters namespaceName=kskrefns1 queueName=queue1 topicName=topic1
+	```
 
-   ------
+[top ->](#TOC) 
 
-   
+### Azure Functions Producer / Consumer
+#### Requirements
+- All Entities must be available in both regions
+- Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
+#### Implementation
+![](images/networking-functions.png)  
+- A function app (1) will be deployed into each region for hosting our producer and consumer functions  
 
-6. Deploy an App Service Plan. P1V2 is used in this example.
+- Both function apps (1) will be configured to leverage regional VNet integration (2) to send all egress traffic from all functions into a newly created integration subnet in each region.  
 
-7. Create a Function App on the above created App Service Plan. If you accept the defaults this will create a storage account and an App Insights resource along with the function app.
+- A UDR (3) will be created and assigned to the integration subnet such that all traffic destined for the internet will be sent through Azure Firewall in the hub VNet. This will allow us to filter and audit all outbound traffic.  
 
-8. On the storage account for the function app, configure access restrictions to let traffic in only from the integration subnet ("integration-subnet"). This should be available for selection as you've enabled the service endpoint for storage. Also make sure to add in any IP's needed to allow the portal to hit the storage account. This might be your proxy egress IP's or your ISPs IP if you're testing from home.
+- The Firewall will be configured to allow out traffic to public App Insights endpoints to enable built-in monitoring facilitated by the Azure Functions host running in the Function App.
 
-9. Enable [Regional VNet Integration](https://docs.microsoft.com/en-us/azure/app-service/web-sites-integrate-with-vnet#regional-vnet-integration) on the Function App (referencing the subnet created in step 1 - "integration-subnet"). Selecting the subnet to be used for Regional VNet Integration via the portal will also mark it as delegated to Microsoft.Web/serverFarms. If you're not using the portal you need to delegate the subnet in advance of setting it as the integration subnet.
+- DNS settings on the Spoke VNet will configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
+#### Deploy
+1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json))
+	```bash
+	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file ./templates/integration-subnet/azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
+	
+	az deployment group create --resource-group network-centralus-rg --name integration-centralus --template-file ./templates/integration-subnet/azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.3.6.0/24"
+	```
+2. Deploy 
+	```bash
+	```
+3. tbd
+	```bash
+	```
+4. tbd
+	```bash
+	```
+___
+[Deploy steps 1-4 in one step.](link_url)
+___
+[top ->](#TOC)  
+## Scalability Considerations
+## High Availability Considerations
+## Disaster Recovery
+### Functions and Service Bus
+#### Requirements
+#### Implementation
+#### Deploy
+### Networking
+## Security Considerations
+## Observability Considerations
+## Cost Considerations
+## DevOps Considerations
 
-10. Ensure **WEBSITE_VNET_ROUTE_ALL** is set to 1 on the function apps configuration settings. This will force all outbound traffic down the regional VNet Integration.
 
-[top ->](#TOC)
 
-## Monitoring Setup
 
-It's best to get monitoring working before we start deploying functions. The functions host will be instrumented with App Insights by default. Connectivity to App Insights however will be broken in this architecture until we give the function host which is running on the function app a path to the public App Insights endpoints. In the future we can solve this problem by using a private endpoint for Azure Monitor. Today however we need to filter this traffic with Azure Firewall.
 
-1. Deploy Azure Firewall into the Hub VNet. Firewall needs to go into a subnet called AzureFirewallSubnet.
-2. Create a User Defined Route (UDR) w/ a route sending address prefix 0.0.0.0/0 to next hop of type "Virtual Appliance" referencing the internal IP of the firewall.
-3. Assign the route to the integration subnet.
-4. Add a new outbound rule to "integration-subnet-nsg" to allow VirtualNetwork to the service tag of AzureMonitor on port 443. Make it priority 498.
-5. Set up application rules for rt.services.visualstudio.com on 443, dc.services.visualstudio.com on 443. These are the public App Insights endpoints that code running in the function host will try to hit when it sends telemetry.
-6. Make sure that you have an NSG rule to allow outbound traffic out of the integration subnet. You can reference the AzureMonitor service tag as a destination. Use 443 as a destination port. 
 
-[top ->](#TOC)
 
-## Triggers and Bindings
 
-At this point we should have a function app up and running with monitoring. Let's walk through creating a few hello world functions with some of the more common triggers / bindings. We'll walk through creating these through the portal for now realizing that in practice functions will be developed on development workstations and likely deployed via pipelines.
 
-[HTTP Trigger](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-http-webhook-trigger?tabs=csharp)
 
-1. Open your function app in the portal and go to Functions -> Functions
-2. Click + Add to create a new function. Choose HTTP Trigger.
-3. Leave Authorization level set to Function and click Create Function.
-4. On the functions page click "code and test". Click "Get Function URL" and trigger the function a few times.
-5. Verify that monitoring is working by clicking "Monitor". Check to be sure invocations show up. Click on Logs, open Live Metrics and make sure it functions. Please note it takes a few minutes for invocations to show in monitor.
 
-[Azure Blob Storage Trigger](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger?tabs=csharp)
 
-1. Open your function app in the portal and go to Functions -> Functions
-2. Click + Add to create a new function. Choose Azure Blob Storage Trigger.
-3. Use the default AzureWebJobsStorage  Storage account connection. This is the function apps storage account. Keep the default path of samples-workitems/{name}
-4. Open your function apps storage account. Click on containers. Create a new container called sample-workitems.
-5. Upload any file into the new container.
-6. Verify that monitoring is working by clicking "Monitor". Check to be sure invocations show up. Click on Logs, open Live Metrics and make sure it functions. Please note it takes a few minutes for invocations to show in monitor.
 
-[Azure Cosmos DB Trigger](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-cosmosdb-v2)
 
-1. Create an Azure Cosmos DB account. 
-2. Configure access restrictions on the Cosmos DB account to allow traffic in from the integration subnet ( for which you have already configured the service endpoint ) and any IP's associated with the portal. This might be your proxy egress IP's or your ISP IP if testing from home.
-3. Open Data Explorer and create a new container called "functionscontainer" with a db called "functionsdb". Set a partition key of /test.
-4. Open your function app in the portal and go to Functions -> Functions
-5. Click + Add to create a new function. Choose Cosmos DB Trigger.
-6. Create a new Cosmos DB Connection referencing the newly created Cosmos Account.
-7. Fill in the db and collection name: "functionsdb" and "functionscontainer".
-8. Allow for the automatic creation of the leases collection.
-9. Go back to your Cosmos account. Open data explorer, open your container. Add a new item.
-10. Go back to your function. Verify that monitoring is working by clicking "Monitor". Check to be sure invocations show up. Click on Logs, open Live Metrics and make sure it functions. Please note it takes a few minutes for invocations to show in monitor.
 
-[top ->](#TOC)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
