@@ -183,10 +183,8 @@ ___
 ### Functions and Service Bus
 #### Requirements
 #### Implementation
-![](images/networking-foundation.png)
 #### Deploy
 ### Networking
-![](images/networking-multi.png)
 ## Security Considerations
 ## Observability Considerations
 ## Cost Considerations
