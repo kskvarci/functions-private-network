@@ -180,15 +180,18 @@ TODO: Elaborate on this path vs via ER GW.
 2. Deploy App Service Plans ([ARM Template](templates/functions/azuredeploy-plan.json))
 	```bash
 	# East
-	az deployment group create --resource-group network-eastus2-rg --name appplan-eastus2 --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefeastus2"
+	az deployment group create --resource-group refworkload-eastus2-rg --name appplan-eastus2 --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefeastus2"
 	
 	# Central
-	az deployment group create --resource-group network-centralus-rg --name appplan-centralus --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefcentralus"
+	az deployment group create --resource-group refworkload-centralus-rg --name appplan-centralus --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefcentralus"
 	```
-3. Deploy Function Apps ([ARM Template](templates/functions/azuredeploy-app.json))
+3. Deploy Function Apps ([ARM Template](templates/functions/azuredeploy-app.json)) TODO: Add Storage to template.
 	```bash
+	# East
+	az deployment group create --resource-group refworkload-eastus2-rg --name app-eastus2 --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefeastus2" appName="kskrefeastus2"
+	
 	# Central
-	az deployment group create --resource-group network-centralus-rg --name app-centralus --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefcentralus" appName="kskrefcentralus"
+	az deployment group create --resource-group refworkload-centralus-rg --name app-centralus --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefcentralus" appName="kskrefcentralus"
 	```
 4. Enable Regional VNet Integration 
 	```bash
