@@ -132,7 +132,7 @@ TODO: Elaborate on this path vs via ER GW.
 	# East to Central
 	az deployment group create --resource-group refworkload-eastus2-rg --name plink-eastcentral --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=easttocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-eastus2-rg namespaceResourceGroup=refworkload-centralus-rg primary=true
 	```
-3. Link the Private DNS Zone
+3. Link the Private DNS Zone ([ARM Template](templates/service-bus/azuredeploy-zonelink.json))
 	```bash
 	# Link the East Zone to the East DNS Network
 	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file .\templates\service-bus\azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-eastus2-rg
@@ -140,17 +140,15 @@ TODO: Elaborate on this path vs via ER GW.
 	# Link the Central Zone to the Central DNS Network
 	az deployment group create --resource-group refworkload-centralus-rg --name link-east --template-file .\templates\service-bus\azuredeploy-zonelink.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net vnetName=hub-vnet networkResourceGroup=network-centralus-rg
 	```
-4. Establish Geo-Redundancy
+4. Establish Geo-Redundancy ([ARM Template](templates/service-bus/azuredeploy-georeplication.json))
 	```bash
 	az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file .\templates\service-bus\azuredeploy-georeplication.json --parameters namespaceName=kskrefns1 pairedNamespaceResourceGroup=refworkload-centralus-rg pairedNamespaceName=kskrefns2 aliasName=kskrefns
 	```
-5. Create a test queue and topic in the primary namespace
+5. Create a test queue and topic in the primary namespace ([ARM Template](templates/service-bus/azuredeploy-queuestopics.json))
 	```bash
 	 az deployment group create --resource-group refworkload-eastus2-rg --name link-east --template-file .\templates\service-bus\azuredeploy-queuestopics.json --parameters namespaceName=kskrefns1 queueName=queue1 topicName=topic1
 	```
-___
-[Deploy steps 1-4 in one step.](link_url)
-___
+
 [top ->](#TOC) 
 
 ### Azure Functions Producer / Consumer
