@@ -95,7 +95,7 @@ In our reference implementation we will be deploying a Premium namespace. This i
   
 - We'll create a namespace in both regions. (1)   
 
-- We'll configure geo-redundancy (2) with the EastUS2 namespace being primary and the CentralUS namespace being secondary. This will replicate all entity information between regions (but not messages).
+- We'll configure geo-redundancy (2 with the EastUS2 namespace being primary and the CentralUS namespace being secondary. This will replicate all entity information between regions (but not messages).
 
 - The namespace will be set up with two private endpoints each. One in region that the namespace is deployed in (2) and one in the other region (3). This will allow private access from both regions. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the internet.    
 TODO: Elaborate on this path vs via ER GW.
@@ -114,9 +114,19 @@ TODO: Elaborate on this path vs via ER GW.
 	
 	az deployment group create --resource-group refworkload-centralus-rg --name namespace-centralus --template-file .\templates\service-bus\azuredeploy-namespace.json --parameters namespaceName=kskrefns2
 	```
-2. Enable Private Link
-	```
-	az deployment group create --resource-group refworkload-eastus2-rg --name namespace-eastus2 --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=centraltocentral privateDnsZoneName  vnetName subnetName networkResourceGroup namespaceResourceGroup primary
+2. Enable Private Link Endpoints (two per region)([ARM Template](templates/service-bus/azuredeploy-privatelink.json))
+	```bash
+	# Central to Central
+	az deployment group create --resource-group refworkload-centralus-rg --name plink-centralcentral --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=centraltocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-centralus-rg namespaceResourceGroup=refworkload-centralus-rg primary=true  
+
+	# Central to East
+	az deployment group create --resource-group refworkload-centralus-rg --name plink-centraleast --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns1 privateEndpointName=centraltoeast privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-centralus-rg namespaceResourceGroup=refworkload-eastus2-rg primary=true  
+
+	# East to East
+	az deployment group create --resource-group refworkload-eastus2-rg --name plink-easteast --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns1 privateEndpointName=easttoeast privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-eastus2-rg namespaceResourceGroup=refworkload-eastus2-rg primary=true  
+
+	# East to Central
+	az deployment group create --resource-group refworkload-eastus2-rg --name plink-eastcentral --template-file .\templates\service-bus\azuredeploy-privatelink.json --parameters namespaceName=kskrefns2 privateEndpointName=easttocentral privateDnsZoneName=privatelink.servicebus.windows.net vnetName=spoke-vnet subnetName=workload-subnet networkResourceGroup=network-eastus2-rg namespaceResourceGroup=refworkload-centralus-rg primary=true
 	```
 3. Link the Private DNS Zone
 	```

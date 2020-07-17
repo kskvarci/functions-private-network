@@ -101,25 +101,6 @@
             "name": "[parameters('privateDnsZoneName')]",
             "location": "global",
             "properties": {}
-        },
-        {
-            "type": "Microsoft.Network/privateDnsZones/A",
-            "apiVersion": "2018-09-01",
-            "name": "[concat(parameters('privateDnsZoneName'), '/namespace2ksk')]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', parameters('privateDnsZoneName'))]"
-            ],
-            "properties": {
-                "metadata": {
-                    "creator": "!"
-                },
-                "ttl": 10,
-                "aRecords": [
-                    {
-                        "ipv4Address": "10.7.0.4"
-                    }
-                ]
-            }
         }
     ]
 }
