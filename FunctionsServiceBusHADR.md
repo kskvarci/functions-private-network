@@ -157,13 +157,19 @@ TODO: Elaborate on this path vs via ER GW.
 
 ### Azure Functions Producer / Consumer
 #### Requirements
-##### Messaging
-- All Entities must be available in both regions
-- Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
-##### Functions
 - All Entities must be available in both regions
 - Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
 #### Implementation
+![](images/networking-functions.png)  
+- A function app (1) will be deployed into each region for hosting our producer and consumer functions  
+
+- Both function apps (1) will be configured to leverage regional VNet integration (2) to send all egress traffic from all functions into a newly created integration subnet in each region.  
+
+- A UDR (3) will be created and assigned to the integration subnet such that all traffic destined for the internet will be sent through Azure Firewall in the hub VNet. This will allow us to filter and audit all outbound traffic.  
+
+- The Firewall will be configured to allow out traffic to public App Insights endpoints to enable built-in monitoring facilitated by the Azure Functions host running in the Function App.
+
+- DNS settings on the Spoke VNet will configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
 #### Deploy
 1. ==Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions== ([ARM Template](templates/integration-subnet/azuredeploy.json))
 	```bash
