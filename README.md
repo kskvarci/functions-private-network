@@ -170,7 +170,7 @@ TODO: Elaborate on this path vs via ER GW.
 - The Firewall will be configured to allow out traffic to public App Insights endpoints to enable built-in monitoring facilitated by the Azure Functions host running in the Function App.
 
 - DNS settings on the Spoke VNet will configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
-#### Deploy
+#### Deploy Infrastructure
 1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json))
 	```bash
 	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file ./templates/integration-subnet/azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
@@ -196,9 +196,19 @@ TODO: Elaborate on this path vs via ER GW.
 4. Enable Regional VNet Integration 
 	```bash
 	```
-___
-[Deploy steps 1-4 in one step.](link_url)
-___
+#### Deploy Reference Function Code
+1. TBD
+	```bash
+	TBD
+	```
+2. TBD
+	```bash
+	TBD
+	```
+3. TBD
+	```bash
+	TBD
+	```
 [top ->](#TOC)  
 ## Scalability Considerations
 ## High Availability Considerations
