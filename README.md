@@ -7,19 +7,17 @@ On Azure, the primary enterprise messaging service is [Azure Service Bus](https:
 
 Azure Functions and Service Bus are relatively simple to get up and running in their default configurations. Things get significantly more complex when implementing them in environments with stringent security requirements that dictate more aggressive network perimeter security and segmentation.
   
-This document explains key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall.
+This document describes key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall. It touches on each pillar defined in the [Microsoft Azure Well-Architected Framework](https://docs.microsoft.com/en-us/azure/architecture/framework).
 
-We will also provide composable deployment artifacts and guidance on how to achieve redundancy across multiple regions while retaining the same security posture.
+We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
 ## TOC
 - [Pre-Reqs](Pre-Reqs)
 - [Architecture](#Architecture)
-- [Scalability Considerations](#Scalability-Considerations)
-- [High Availability Considerations](#High-Availability-Considerations)
-- [Disaster Recovery](#Disaster-Recovery)
-- [Security Considerations](#Security-Considerations)
-- [Observability Considerations](Observability-Considerations)
-- [Cost Considerations](#Cost-Considerations)
-- [DevOps Considerations](#DevOps-Considerations) 
+- [Cost Optimization Considerations](#Cost-Optimization-Considerations)
+- [Operational Considerations](#Operational-Considerations)
+- [Performance and Scalability Considerations](#Performance-and-Scalability-Considerations)
+- [Reliability Considerations](#Reliability-Considerations)
+- [Security Considerations](#Security-Considerations) 
 ## Pre-Reqs
 In order to deploy examples in this article you will need:
 - An Azure Subscription and an account with Contributor level access
@@ -210,18 +208,21 @@ TODO: Elaborate on this path vs via ER GW.
 	TBD
 	```
 [top ->](#TOC)  
-## Scalability Considerations
-## High Availability Considerations
-## Disaster Recovery
-### Functions and Service Bus
-#### Requirements
-#### Implementation
-#### Deploy
-### Networking
+## Cost Optimization Considerations
+## Operational Considerations
+### Monitoring
+### Code Deployment
+### Infrastructure Provisioning
+## Performance and Scalability Considerations
+## Reliability Considerations
+### High Availability
+### Disaster Recovery
 ## Security Considerations
-## Observability Considerations
-## Cost Considerations
-## DevOps Considerations
+### Identity and Access Management
+### Network Security
+### Storage, Data and Encryption
+
+
 
 
 
