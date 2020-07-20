@@ -7,9 +7,12 @@ On Azure, the primary enterprise messaging service is [Azure Service Bus](https:
 
 Azure Functions and Service Bus are relatively simple to get up and running in their default configurations. Things get significantly more complex when implementing them in environments with stringent security requirements that dictate more aggressive network perimeter security and segmentation.
   
-This document describes key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall. It touches on each pillar defined in the [Microsoft Azure Well-Architected Framework](https://docs.microsoft.com/en-us/azure/architecture/framework).
+This document describes key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall.
 
-We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
+Similar to other architectures available in the [Azure Architecture Center](https://docs.microsoft.com/en-us/azure/architecture/browse/), this document touches on each pillar defined in the [Microsoft Azure Well-Architected Framework](https://docs.microsoft.com/en-us/azure/architecture/framework).
+
+In addition to defining the architectural pattern we will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started on your journey towards repeatable deployment.  
+
 ## TOC
 - [Architecture and Composable Deployment Code](#Architecture-and-Composable-Deployment-Code)
 	- [Virtual Network Foundation](#Virtual-Network-Foundation)
