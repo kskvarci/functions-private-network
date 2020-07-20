@@ -216,13 +216,16 @@ Insert details here on how to appropriately size and scale both Function and Ser
 ### Requirements
 - Describe target RPO / RTO.
 - Describe FMA.
-- Describe Backup / Restore process if any.
 ### High Availability
 - Describe Design
 - Describe fail-over, fail-back process.
 ### Disaster Recovery
-- Describe Design
+- Describe Design  
+Active Passive / Non-HTTP Trigger Failover
+![](images/activePassiveNonHTTPNormal.png)  
+![](images/activePassiveNonHTTPFailed.png) 
 - Describe fail-over, fail-back process.
+- Describe backup / recovery process.
 ## Security Considerations
 ### Identity and Access Management
 - Describe Control Plane IAM implementation
