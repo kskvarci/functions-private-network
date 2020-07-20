@@ -114,7 +114,7 @@ TODO: Elaborate on this path vs via ER GW.
 	# for Central resources
 	az group create --location centralus --name refworkload-centralus-rg
 	```
-2. Create Private DNS Zone for Service Bus
+2. Create Private DNS Zone for Service Bus ([ARM Template](templates/service-bus/azuredeploy-privatezone.json))
 	```bash
 	# for East
 	az deployment group create --resource-group refworkload-eastus2-rg --name zone-eastus2 --template-file ./templates/service-bus/azuredeploy-privatezone.json --parameters privateDnsZoneName=privatelink.servicebus.windows.net   
