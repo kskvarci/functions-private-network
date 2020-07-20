@@ -11,7 +11,7 @@ This document describes key considerations for deploying Azure Functions alongsi
 
 We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
 ## TOC
-- [Pre-Reqs](Pre-Reqs)
+- [Pre-Reqs](Pre\-Reqs)
 - [Architecture](#Architecture)
 - [Cost Optimization Considerations](#Cost-Optimization-Considerations)
 - [Operational Considerations](#Operational-Considerations)
