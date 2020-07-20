@@ -222,7 +222,8 @@ Insert details here on how to appropriately size and scale both Function and Ser
 ### Disaster Recovery
 - Describe Design  
 Active Passive / Non-HTTP Trigger Failover
-![](images/activePassiveNonHTTPNormal.png)  
+![](images/activePassiveNonHTTPNormal.png) 
+Active Passive / Non-HTTP Trigger Failover - Failover
 ![](images/activePassiveNonHTTPFailed.png) 
 - Describe fail-over, fail-back process.
 - Describe backup / recovery process.
