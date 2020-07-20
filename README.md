@@ -69,7 +69,6 @@ This guide assumes that you are deploying your solution into a networking enviro
 	az deployment group create --resource-group network-centralus-rg --name bind-centralus --template-file ./templates/bind-forwarder/azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
 	```
 
-
 [top ->](#TOC)    
 ### Azure Service Bus
 #### Requirements
@@ -209,18 +208,35 @@ TODO: Elaborate on this path vs via ER GW.
 	```
 [top ->](#TOC)  
 ## Cost Optimization Considerations
+Insert here specifics on Functions, and Service Bus cost optimization considerations.
 ## Operational Considerations
-### Monitoring
 ### Code Deployment
+Insert here specifics on Azure DevOps code build and deployment pipeline.
 ### Infrastructure Provisioning
+Insert here specifics on Azure DevOps infrastructure deployment pipeline.
+### Monitoring
+Insert here guidance on infrastructure and App Monitoring.
 ## Performance and Scalability Considerations
+Insert details here on how to appropriately size and scale both Function and Service Bus in the context of this solution.
 ## Reliability Considerations
+### Requirements
+- Describe target RPO / RTO.
+- Describe FMA.
+- Describe Backup / Restore process if any.
 ### High Availability
+- Describe Design
+- Describe fail-over, fail-back process.
 ### Disaster Recovery
+- Describe Design
+- Describe fail-over, fail-back process.
 ## Security Considerations
 ### Identity and Access Management
+- Describe Control Plane implementation
+- Describe Data Plane implementation
 ### Network Security
+- Describe network security controls
 ### Storage, Data and Encryption
+- Describe approaches for protecting data at rest and in flight.
 
 
 
