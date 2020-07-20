@@ -11,14 +11,14 @@ This document describes key considerations for deploying Azure Functions alongsi
 
 We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
 ## TOC
-- [Prerequisites](Pre Reqs)
+- [Prerequisites](#Prerequisites)
 - [Architecture](#Architecture)
 - [Cost Optimization Considerations](#Cost-Optimization-Considerations)
 - [Operational Considerations](#Operational-Considerations)
 - [Performance and Scalability Considerations](#Performance-and-Scalability-Considerations)
 - [Reliability Considerations](#Reliability-Considerations)
 - [Security Considerations](#Security-Considerations) 
-## Pre Requisites
+## Prerequisites
 In order to deploy examples in this article you will need:
 - An Azure Subscription and an account with Contributor level access
 - Access to a Bash (Linux machine or WSL on Windows)
