@@ -185,15 +185,23 @@ TODO: Elaborate on this path vs via ER GW.
 	# Central
 	az deployment group create --resource-group refworkload-centralus-rg --name appplan-centralus --template-file ./templates/functions/azuredeploy-plan.json --parameters planName="kskrefcentralus"
 	```
-3. Deploy Function Apps ([ARM Template](templates/functions/azuredeploy-app.json)) TODO: Add Storage to template.
+3. Deploy the Function App Storage Accounts ([ARM Template](templates/functions/azuredeploy-storage.json))
 	```bash
 	# East
-	az deployment group create --resource-group refworkload-eastus2-rg --name app-eastus2 --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefeastus2" appName="kskrefeastus2"
+	az deployment group create --resource-group refworkload-eastus2-rg --name funcstor-eastus2 --template-file ./templates/functions/azuredeploy-storage.json --parameters storageAccountName="kskrefeastus2"
 	
 	# Central
-	az deployment group create --resource-group refworkload-centralus-rg --name app-centralus --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefcentralus" appName="kskrefcentralus"
+	az deployment group create --resource-group refworkload-centralus-rg --name funcstor-centralus --template-file ./templates/functions/azuredeploy-storage.json --parameters storageAccountName="kskrefcentralus"
 	```
-4. Enable Regional VNet Integration 
+4. Deploy Function Apps ([ARM Template](templates/functions/azuredeploy-app.json)) TODO: Add Storage to template.
+	```bash
+	# East
+	az deployment group create --resource-group refworkload-eastus2-rg --name app-eastus2 --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefeastus2" appName="kskrefeastus2" vnetName=spoke-vnet subnetName=integration-subnet networkResourceGroup=network-eastus2-rg
+	
+	# Central
+	az deployment group create --resource-group refworkload-centralus-rg --name app-centralus --template-file ./templates/functions/azuredeploy-app.json --parameters planName="kskrefcentralus" appName="kskrefcentralus" vnetName=spoke-vnet subnetName=integration-subnet networkResourceGroup=network-centralus-rg
+	```
+5. Update Function App Config for routing and storage 
 	```bash
 	```
 #### Deploy Reference Function Code
