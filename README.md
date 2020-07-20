@@ -168,7 +168,7 @@ TODO: Elaborate on this path vs via ER GW.
 
 - DNS settings on the Spoke VNet will configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
 #### Deploy Infrastructure
-1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json))
+1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json)) - *Requires Network Perms*
 	```bash
 	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file ./templates/integration-subnet/azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
 	
