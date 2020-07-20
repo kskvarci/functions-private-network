@@ -12,11 +12,26 @@ This document describes key considerations for deploying Azure Functions alongsi
 We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
 ## TOC
 - [Architecture and Composable Deployment Code](#Architecture-and-Composable-Deployment-Code)
+	- [Virtual Network Foundation](#Virtual-Network-Foundation)
+	- [Azure Service Bus](#Azure-Service-Bus)
+	- [Azure Functions](#Azure-Functions)
 - [Cost Optimization Considerations](#Cost-Optimization-Considerations)
+	- Functions
+	- Service Bus
 - [Operational Considerations](#Operational-Considerations)
+	- Infrastructure Deployment Pipelines
+	- Code Deployment Pipelines
+	- Monitoring
 - [Performance and Scalability Considerations](#Performance-and-Scalability-Considerations)
+	- Initial Sizing
+	- Ongoing Scale Mangement
 - [Reliability Considerations](#Reliability-Considerations)
+	- High Availability
+	- Disaster Recovery
 - [Security Considerations](#Security-Considerations) 
+	- Identity and Access Management
+	- Network Security
+	- Storage, Data and Encryption
 ## Architecture and Composable Deployment Code
 ### Virtual Network Foundation
 #### Implementation
@@ -146,7 +161,7 @@ TODO: Elaborate on this path vs via ER GW.
 
 [top ->](#TOC) 
 
-### Azure Functions Producer / Consumer
+### Azure Functions
 #### Requirements
 - All Entities must be available in both regions
 - Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
