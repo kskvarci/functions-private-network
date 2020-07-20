@@ -12,7 +12,7 @@ This document describes key considerations for deploying Azure Functions alongsi
 We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
 ## TOC
 - [Prerequisites](#Prerequisites)
-- [Architecture](#Architecture)
+- [Architecture and Composable Deployment Code](#Architecture-and-Composable-Deployment-Code)
 - [Cost Optimization Considerations](#Cost-Optimization-Considerations)
 - [Operational Considerations](#Operational-Considerations)
 - [Performance and Scalability Considerations](#Performance-and-Scalability-Considerations)
@@ -22,8 +22,8 @@ We will also provide composable deployment artifacts (ARM templates and Pipeline
 In order to deploy examples in this article you will need:
 - An Azure Subscription and an account with Contributor level access
 - Access to a Bash (Linux machine or WSL on Windows)
-- Access to Azure DevOps (if you choose to impliment any of the pipelines)
-## Architecture
+- Access to Azure DevOps (if you choose to implement any of the pipelines)
+## Architecture and Composable Deployment Code
 ### Virtual Network Foundation
 #### Implementation
 ![](images/networking-foundation.png)
