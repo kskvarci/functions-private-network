@@ -35,6 +35,7 @@ In addition to defining the architectural pattern we will also provide composabl
 	- Identity and Access Management
 	- Network Security
 	- Storage, Data and Encryption
+	- Governance
 ## Architecture and Composable Deployment Code
 ### Virtual Network Foundation
 #### Implementation
