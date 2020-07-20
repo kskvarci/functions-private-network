@@ -7,25 +7,17 @@ On Azure, the primary enterprise messaging service is [Azure Service Bus](https:
 
 Azure Functions and Service Bus are relatively simple to get up and running in their default configurations. Things get significantly more complex when implementing them in environments with stringent security requirements that dictate more aggressive network perimeter security and segmentation.
   
-This document explains key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall.
+This document describes key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall. It touches on each pillar defined in the [Microsoft Azure Well-Architected Framework](https://docs.microsoft.com/en-us/azure/architecture/framework).
 
-We will also provide composable deployment artifacts and guidance on how to achieve redundancy across multiple regions while retaining the same security posture.
+We will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started with repeatable deployment.
 ## TOC
-- [Pre-Reqs](Pre-Reqs)
-- [Architecture](#Architecture)
-- [Scalability Considerations](#Scalability-Considerations)
-- [High Availability Considerations](#High-Availability-Considerations)
-- [Disaster Recovery](#Disaster-Recovery)
-- [Security Considerations](#Security-Considerations)
-- [Observability Considerations](Observability-Considerations)
-- [Cost Considerations](#Cost-Considerations)
-- [DevOps Considerations](#DevOps-Considerations) 
-## Pre-Reqs
-In order to deploy examples in this article you will need:
-- An Azure Subscription and an account with Contributor level access
-- Access to a Bash (Linux machine or WSL on Windows)
-- Access to Azure DevOps (if you choose to impliment any of the pipelines)
-## Architecture
+- [Architecture and Composable Deployment Code](#Architecture-and-Composable-Deployment-Code)
+- [Cost Optimization Considerations](#Cost-Optimization-Considerations)
+- [Operational Considerations](#Operational-Considerations)
+- [Performance and Scalability Considerations](#Performance-and-Scalability-Considerations)
+- [Reliability Considerations](#Reliability-Considerations)
+- [Security Considerations](#Security-Considerations) 
+## Architecture and Composable Deployment Code
 ### Virtual Network Foundation
 #### Implementation
 ![](images/networking-foundation.png)
@@ -70,7 +62,6 @@ This guide assumes that you are deploying your solution into a networking enviro
 	
 	az deployment group create --resource-group network-centralus-rg --name bind-centralus --template-file ./templates/bind-forwarder/azuredeploy.json --parameters adminUsername=$userName sshKeyData=$sshKey vnetName=hub-vnet subnetName=DNSSubnet
 	```
-
 
 [top ->](#TOC)    
 ### Azure Service Bus
@@ -171,7 +162,7 @@ TODO: Elaborate on this path vs via ER GW.
 
 - DNS settings on the Spoke VNet will configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
 #### Deploy Infrastructure
-1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json))
+1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json)) - *Requires Network Perms*
 	```bash
 	az deployment group create --resource-group network-eastus2-rg --name integration-eastus2 --template-file ./templates/integration-subnet/azuredeploy.json --parameters existingVnetName=spoke-vnet integrationSubnetPrefix="10.1.6.0/24"
 	
@@ -218,18 +209,47 @@ TODO: Elaborate on this path vs via ER GW.
 	TBD
 	```
 [top ->](#TOC)  
-## Scalability Considerations
-## High Availability Considerations
-## Disaster Recovery
-### Functions and Service Bus
-#### Requirements
-#### Implementation
-#### Deploy
-### Networking
+## Cost Optimization Considerations
+Insert here specifics on Functions, and Service Bus cost optimization considerations.
+## Operational Considerations
+### Code Deployment
+Insert here specifics on Azure DevOps code build and deployment pipeline.
+### Infrastructure Provisioning
+Insert here specifics on Azure DevOps infrastructure deployment pipeline.
+### Monitoring
+Insert here guidance on infrastructure and App Monitoring.
+## Performance and Scalability Considerations
+Insert details here on how to appropriately size and scale both Function and Service Bus in the context of this solution.
+## Reliability Considerations
+### Requirements
+- Describe target RPO / RTO.
+- Describe FMA.
+### High Availability
+- Describe Design
+- Describe fail-over, fail-back process.
+### Disaster Recovery
+- Describe Design  
+Active Passive / Non-HTTP Trigger Failover
+![](images/activePassiveNonHTTPNormal.png) 
+Active Passive / Non-HTTP Trigger Failover - Failover
+![](images/activePassiveNonHTTPFailed.png) 
+- Describe fail-over, fail-back process.
+- Describe backup / recovery process.
 ## Security Considerations
-## Observability Considerations
-## Cost Considerations
-## DevOps Considerations
+### Identity and Access Management
+- Describe Control Plane IAM implementation
+- Describe Data Plane IAM implementation
+- Describe App Authentication / Authorization implementation
+### Network Security
+- Describe network security controls
+	- Azure Firewall for Egress Filtering / Auditing
+	- Network Security Groups for network segmentation.
+	- Routing configuration (BGP route propagation and UDRs)
+	- On-Premises Firewalls
+### Storage, Data and Encryption
+- Describe approaches for protecting data at rest and in flight.
+
+
 
 
 
