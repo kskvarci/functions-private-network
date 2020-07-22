@@ -187,9 +187,9 @@ TODO: Elaborate on this path vs via ER GW.
 
 - A UDR (3) will be created and assigned to the integration subnet such that all traffic destined for the internet will be sent through Azure Firewall in the hub VNet. This will allow us to filter and audit all outbound traffic.  
 
-- The Firewall will be configured to allow out traffic to public App Insights endpoints to enable built-in monitoring facilitated by the Azure Functions host running in the Function App.
+- The Firewall will be configured to allow traffic to public App Insights endpoints to enable built-in monitoring facilitated by the Azure Functions host running in the Function App.
 
-- DNS settings on the Spoke VNet will configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
+- DNS settings on the Spoke VNet will be configured such that all DNS queries (4) originating from subnets in the VNet will be sent to our custom DNS forwarders.
 #### Deploy Infrastructure
 1. Deploy and Configure the Integration Subnet for Regional VNet Integration for both regions ([ARM Template](templates/integration-subnet/azuredeploy.json)) - *Requires Network Perms*
 	```bash
@@ -239,7 +239,16 @@ TODO: Elaborate on this path vs via ER GW.
 	```
 [top ->](#TOC)  
 ## Cost Optimization Considerations
-Insert here specifics on Functions, and Service Bus cost optimization considerations.
+Cost in Azure accrues over time based on the services that are used within your solution. In most cases there are a large number of meters that need to be accounted for if you're looking to draw a comprehensive pictures of cost. Generally however the vast majority of overall cost will come a smaller number of core services that are in use. This being said, with this solution we'll focus on service bus, functions and networking costs as they will constitute the majority of your spend.
+### Service Bus
+As previously mentioned, Service Bus Namespaces can be provisioned in one of three tiers ( Basic, Standard and Premium). For details on how these tiers are priced please see the following [pricing document](https://azure.microsoft.com/en-us/pricing/details/service-bus/?&OCID=AID2100131_SEM_XoKIJQAAAFvOgjyo:20200722185658:s&msclkid=525e7aa4c0e71f13cee325bc4b11ecf8&ef_id=XoKIJQAAAFvOgjyo:20200722185658:s&dclid=CNyPsu_E4eoCFYg_DAodvM8HkA).
+
+Requirements dictate that we use Premium Namespaces in this solution. The primary unit of scale for Premium Namespaces is the Messaging Unit (MU). Billing is based on how many messaging units (1,2,4 or 8) you run per namespace per hour. The cost is linear per MU. Current rates can be found in the above linked pricing document.
+
+### In general, you'll want to be sure that you're running only as many messaging units in your namespace as your performance and scale requirements dictate. It's difficult to discern the number of MUs you will require without conducting some initial scale testing. We generally recommend you start with one or two MUs, test and scale accordingly. See [Performance and Scalability considerations](#Performance-and-Scalability-considerations) for more information.
+
+### Functions
+### Networking
 ## Operational Considerations
 ### Code Deployment
 Insert here specifics on Azure DevOps code build and deployment pipeline.
