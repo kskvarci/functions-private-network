@@ -9,6 +9,8 @@ Azure Functions and Service Bus are relatively simple to get up and running in t
   
 This document describes key considerations for deploying Azure Functions alongside Service Bus in a fully locked down environment using technologies including regional VNet Integration for functions, private endpoints for Service Bus and a variety of network security controls including Network Security Groups and Azure Firewall.
 
+We've modeled this architecture on an fairly aggressive set of requirements from a performance/scalability, reliability and security perspective. Those requirements will be noted within the document. Your implementation of this pattern may differ depending on your needs.
+
 Similar to other architectures available in the [Azure Architecture Center](https://docs.microsoft.com/en-us/azure/architecture/browse/), this document touches on each pillar defined in the [Microsoft Azure Well-Architected Framework](https://docs.microsoft.com/en-us/azure/architecture/framework).
 
 In addition to defining the architectural pattern we will also provide composable deployment artifacts (ARM templates and Pipelines) to get your started on your journey towards repeatable deployment.  
@@ -35,7 +37,8 @@ In addition to defining the architectural pattern we will also provide composabl
 	- Identity and Access Management
 	- Network Security
 	- Storage, Data and Encryption
-	- Governance
+	- Governance  
+
 ## Architecture and Composable Deployment Code
 ### Virtual Network Foundation
 #### Implementation
@@ -55,7 +58,7 @@ This guide assumes that you are deploying your solution into a networking enviro
 - Generally, custom DNS is configured on the spoke VNet settings. DNS forwarders in the hub are referenced. These forwarders  provide conditional forwarding to the Azure internal resolver and on premises DNS servers as needed. In this reference implementation we'll deploy a simple BIND forwarder (6) into our hub network that will be configured to forward requests to the Azure internal resolver.   
 
 - We'll deploy an identical configuration across two regions.
-#### Deploy
+#### Deployment
 1. Create a resource group for each region's network resources
 	```bash
 	az group create --location eastus2 --name network-eastus2-rg  
@@ -89,7 +92,8 @@ This guide assumes that you are deploying your solution into a networking enviro
 - Direct integration to and accessibility from private networks
 - No accessibility from public networks
 - Cross Region Entity Replication
-
+- No message loss on regional failure
+- Ability to fail back and forth between primary and secondary regions on a scheduled basis for DR drills
 #### Implementation
 ![](images/networking-servicebus.png)  
 The base-level resource for Azure Service Bus is a Service Bus Namespace. Namespaces contain the entities that we will be working with ( Queues, Topics and Subscriptions ).
@@ -102,11 +106,14 @@ In our reference implementation we will be deploying a Premium namespace. This i
 
 - We'll configure geo-redundancy (2) with the EastUS2 namespace being primary and the CentralUS namespace being secondary. This will replicate all entity information between regions (but not messages).
 
-- The namespace will be set up with two private endpoints each. One in region that the namespace is deployed in (3) and one in the other region (4). This will allow private access from both regions. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the internet.    
+- The namespace will be set up with two private endpoints each. One in the region that the namespace is deployed in (3) and one in the other region (4). This will allow private access from both regions. We will configure access restrictions (per-namespace firewall) on the namespace such that the endpoint will be the only method one can use to connect to the namespace. This effectively takes the namespace off the Internet.    
 TODO: Elaborate on this path vs via ER GW.
 
-- A set of private DNS zones (5), requisite A records and VNet links will be created such that queries originating from any VNet that is configured to use our bind forwarders will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.    
-#### Deploy
+- A set of private DNS zones (5), requisite A records and VNet links will be created such that queries originating from any VNet that is configured to use our bind forwarders will resolve the namespace name to the IP of the private endpoint and not the public IP. This is done via split horizon DNS. E.G. externally, the namespace URLs will continue to resolve to the public IP's which will be inaccessible due to the access restriction configuration. Internally the same URLs will resolve to the IP of the private endpoint.  
+  Normally, we would maintain a single zone per service for private link. Because we need DNS queries for the namespace to resolve to different endpoint IP's depending on where the queries are initiated from we'll use two zones which we can link to different networks in this scenario.
+  
+- TODO: Add specifics on DNS resolution and network path to private endpoints for both regions from on-premises.
+#### Deployment
 1. Create resource groups for our reference workload
 	```bash
 	# for East resources
@@ -167,8 +174,11 @@ TODO: Elaborate on this path vs via ER GW.
 
 ### Azure Functions
 #### Requirements
-- All Entities must be available in both regions
-- Must be able to continue processing of messages that are in the messaging store but have yet to be processed when failover occurs.
+- Support for Java (version 8)
+- Support for .NET Core C# (version 3.1)
+- Ability to run in multiple regions (East US 2 and Central US)
+- Connectivity to Azure and on-premises private networks
+- Dynamic scaling based on incoming event load / queue depth
 #### Implementation
 ![](images/networking-functions.png)  
 - A function app (1) will be deployed into each region for hosting our producer and consumer functions  
@@ -238,7 +248,8 @@ Insert here specifics on Azure DevOps infrastructure deployment pipeline.
 ### Monitoring
 Insert here guidance on infrastructure and App Monitoring.
 ## Performance and Scalability Considerations
-Insert details here on how to appropriately size and scale both Function and Service Bus in the context of this solution.
+### Functions Performance
+### Functions Scale
 ## Reliability Considerations
 ### Requirements
 - Describe target RPO / RTO.
