@@ -245,7 +245,7 @@ As previously mentioned, Service Bus Namespaces can be provisioned in one of thr
 
 Requirements dictate that we use Premium Namespaces in this solution. The primary unit of scale for Premium Namespaces is the Messaging Unit (MU). Billing is based on how many messaging units (1,2,4 or 8) you run per namespace per hour. The cost is linear per MU. Current rates can be found in the above linked pricing document.
 
-### In general, you'll want to be sure that you're running only as many messaging units in your namespace as your performance and scale requirements dictate. It's difficult to discern the number of MUs you will require without conducting some initial scale testing. We generally recommend you start with one or two MUs, test and scale accordingly. See [Performance and Scalability considerations](#Performance-and-Scalability-considerations) for more information.
+In general, you'll want to be sure that you're running only as many messaging units in your namespace as your performance and scale requirements dictate. It's difficult to discern the number of MUs you will require without conducting some initial scale testing. We generally recommend you start with one or two MUs, test and scale accordingly. See [Performance and Scalability considerations](#Performance-and-Scalability-considerations) for more information.
 
 ### Functions
 ### Networking
