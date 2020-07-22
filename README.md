@@ -262,6 +262,10 @@ It is also possible to adjust the Maximum instance burst ceiling on the plan suc
 
 A premium plan can have one or more function apps attached to it. At the function app level you can select the number of [pre-warmed instances](https://docs.microsoft.com/en-us/azure/azure-functions/functions-premium-plan#pre-warmed-instances) you want to run. This number cannot exceed the "minimum instance" level set at the plan level. This functionality is designed to avoid what are commonly referred to as cold starts. Adjusting this setting upward will cause you to be charged for the number of pre-warmed instances on an ongoing basis.	
 
+Below is a snippet of the scale adjustment sliders in the portal. THis is from the app level scale settings and shows both app and plan scaling parameters:
+![](images/scale-out.png) 
+
+
 ### Networking
 ## Operational Considerations
 ### Code Deployment
